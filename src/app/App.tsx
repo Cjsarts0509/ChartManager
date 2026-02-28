@@ -23,6 +23,7 @@ export default function App() {
   const [lastWeekData, setLastWeekData] = useState<ProcessedData>({ title: "", books: [] });
   const [lists, setLists] = useState<{ id: string }[]>([{ id: 'init-1' }]);
   const [printingId, setPrintingId] = useState<string | null>(null);
+  const [printMode, setPrintMode] = useState<'normal' | 'a4' | null>(null);
 
   // Cloud state
   const [cloudInfo, setCloudInfo] = useState<CloudFilesResponse | null>(null);
@@ -91,6 +92,13 @@ export default function App() {
     loadFromCloud(true);
   }, [loadFromCloud]);
 
+  // Reset printMode after print dialog closes (cancel or print)
+  useEffect(() => {
+    const handler = () => setPrintMode(null);
+    window.addEventListener('afterprint', handler);
+    return () => window.removeEventListener('afterprint', handler);
+  }, []);
+
   // ============================
   // File Upload Handler (단일 버튼)
   // 1. 로컬 파싱 → weekKey 추출
@@ -134,6 +142,13 @@ export default function App() {
   const handleDeleteList = (id: string) => setLists(prev => prev.filter(l => l.id !== id));
   
   const handleGlobalPrint = () => window.print();
+  const handleGlobalPrintA4 = () => {
+    setPrintMode('a4');
+    setTimeout(() => {
+      window.print();
+      setPrintMode(null);
+    }, 100);
+  };
   const handlePrintCard = (id: string) => {
     setPrintingId(id);
     setTimeout(() => { window.print(); setPrintingId(null); }, 100);
@@ -195,6 +210,7 @@ export default function App() {
           onUploadFile={handleFileUpload}
           onAddList={handleAddList}
           onPrint={handleGlobalPrint}
+          onPrintA4={handleGlobalPrintA4}
           cloudInfo={cloudInfo}
           cloudLoading={cloudLoading}
           onRefreshCloud={() => loadFromCloud(false)}
@@ -269,29 +285,71 @@ export default function App() {
             position: static !important;
           }
           .canvas-hint { display: none !important; }
-          .canvas-content {
-            transform: none !important;
-            position: static !important;
-            display: block !important;
-            gap: 0 !important;
-          }
-          .list-wrapper {
-            display: block !important;
-            page-break-after: always !important;
-            break-after: page !important;
-          }
-          .list-wrapper:last-child {
-            page-break-after: auto !important;
-            break-after: auto !important;
-          }
-          .list-card-print {
-            width: 400px !important;
-            max-width: 400px !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            box-shadow: none !important;
-            border: none !important;
-          }
+
+          ${printMode === 'a4' ? `
+            /* ===== A4 모드: 리스트 2개를 A4 1장에 나란히 ===== */
+            @page { size: A4 portrait; margin: 5mm; }
+            .canvas-content {
+              transform: none !important;
+              position: static !important;
+              display: flex !important;
+              flex-wrap: wrap !important;
+              flex-direction: row !important;
+              gap: 0 !important;
+              width: 100% !important;
+            }
+            .list-wrapper {
+              display: block !important;
+              width: 50% !important;
+              box-sizing: border-box !important;
+              padding: 0 2mm !important;
+              page-break-after: auto !important;
+              break-after: auto !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            .list-wrapper:nth-child(2n) {
+              page-break-after: always !important;
+              break-after: page !important;
+            }
+            .list-wrapper:last-child {
+              page-break-after: auto !important;
+              break-after: auto !important;
+            }
+            .list-card-print {
+              width: 100% !important;
+              max-width: 100% !important;
+              margin: 0 !important;
+              padding: 2px !important;
+              box-shadow: none !important;
+              border: none !important;
+            }
+          ` : `
+            /* ===== 일반 모드: 리스트 1개당 1페이지 ===== */
+            .canvas-content {
+              transform: none !important;
+              position: static !important;
+              display: block !important;
+              gap: 0 !important;
+            }
+            .list-wrapper {
+              display: block !important;
+              page-break-after: always !important;
+              break-after: page !important;
+            }
+            .list-wrapper:last-child {
+              page-break-after: auto !important;
+              break-after: auto !important;
+            }
+            .list-card-print {
+              width: 400px !important;
+              max-width: 400px !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              box-shadow: none !important;
+              border: none !important;
+            }
+          `}
         }
       `}</style>
     </div>

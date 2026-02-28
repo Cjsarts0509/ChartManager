@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Upload, Plus, Printer, ExternalLink, RefreshCw, Cloud } from 'lucide-react';
+import { Upload, Plus, Printer, ExternalLink, RefreshCw, Cloud, FileText } from 'lucide-react';
 import { CloudFilesResponse } from '../../lib/cloud';
 
 interface TopBarProps {
@@ -8,6 +8,7 @@ interface TopBarProps {
   onUploadFile: (file: File) => void;
   onAddList: () => void;
   onPrint: () => void;
+  onPrintA4: () => void;
   cloudInfo: CloudFilesResponse | null;
   cloudLoading: boolean;
   onRefreshCloud: () => void;
@@ -19,6 +20,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onUploadFile,
   onAddList,
   onPrint,
+  onPrintA4,
   cloudInfo,
   cloudLoading,
   onRefreshCloud
@@ -133,6 +135,14 @@ export const TopBar: React.FC<TopBarProps> = ({
           >
             <Printer size={20} className="mb-0.5" />
             <span className="text-[10px] font-bold">전체인쇄</span>
+          </button>
+
+          <button 
+            onClick={onPrintA4}
+            className="flex flex-col items-center justify-center bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 w-[70px] h-14 rounded-md transition-colors"
+          >
+            <FileText size={20} className="mb-0.5" />
+            <span className="text-[10px] font-bold">A4인쇄</span>
           </button>
         </div>
 

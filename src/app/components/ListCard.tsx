@@ -171,7 +171,7 @@ export const ListCard: React.FC<ListCardProps> = ({
       </div>
 
       {/* Print Area */}
-      <div className="w-[400px] print:w-[400px] bg-white">
+      <div className="w-[400px] print:w-full bg-white">
         {/* Section 1: This Week */}
         <div className="text-center border-t-2 border-black pt-2 pb-1">
           <h3 className="font-bold text-sm">{title}</h3>
