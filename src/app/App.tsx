@@ -5,7 +5,7 @@ import { MobileView } from './components/MobileView';
 import { UploadConfirmDialog } from './components/UploadConfirmDialog';
 import { ProcessedData } from '../lib/types';
 import { parseExcel, parseExcelFromBuffer, extractWeekKey } from '../lib/excel';
-import { fetchCloudFiles, uploadToCloud, downloadFileAsBuffer, CloudFilesResponse } from '../lib/cloud';
+import { fetchCloudFiles, uploadToCloud, downloadFileAsBuffer, computeFileHash, CloudFilesResponse } from '../lib/cloud';
 import { Toaster, toast } from 'sonner';
 
 // Custom hook for responsive breakpoint
@@ -32,6 +32,7 @@ export default function App() {
     weekKey: string;
     title: string;
     existingTitle?: string;
+    fileHash?: string;
   } | null>(null);
 
   // Cloud state
@@ -112,9 +113,10 @@ export default function App() {
   // File Upload Handler (단일 버튼)
   // 1. 용량 검증 (3MB 제한)
   // 2. 로컬 파싱 → weekKey 추출
-  // 3. 중복 체크 → 확인 다이얼로그
-  // 4. 클라우드 업로드 (weekKey 기반 저장)
-  // 5. 클라우드에서 최신 2개 다시 불러오기
+  // 3. 파일 해시 계산 (SHA-256, <1ms for 70KB)
+  // 4. 중복 체크 → 확인 다이얼로그
+  // 5. 클라우드 업로드 (weekKey 기반 저장)
+  // 6. 클라우드에서 최신 2개 다시 불러오기
   // ============================
   const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
 
@@ -136,26 +138,36 @@ export default function App() {
         return;
       }
 
+      // 4. 파일 해시 계산 (SHA-256, <1ms for 70KB)
+      const fileHash = await computeFileHash(file);
+
       toast.success(`${data.title} (${weekKey}) 파싱 완료`);
 
-      // 4. 중복 체크: 클라우드에 같은 weekKey가 이미 있는지 확인
+      // 5. 중복 체크: 클라우드에 같은 weekKey가 이미 있는지 확인
       const existingFile = [cloudInfo?.thisWeek, cloudInfo?.lastWeek].find(
         (f) => f?.exists && f.weekKey === weekKey
       );
 
       if (existingFile) {
-        // 동일 weekKey 파일 존재 → 확인 다이얼로그 표시
+        // 5a. 해시 비교: 완전히 동일한 파일이면 업로드 스킵
+        if (existingFile.fileHash && existingFile.fileHash === fileHash) {
+          toast.info('동일한 파일이 이미 클라우드에 있습니다.\n업로드를 건너뜁니다.');
+          return;
+        }
+
+        // 5b. weekKey 같지만 내용 다름 → 덮어쓰기 확인
         setUploadConfirm({
           file,
           weekKey,
           title: data.title,
           existingTitle: existingFile.title || existingFile.filename,
+          fileHash,
         });
         return;
       }
 
-      // 5. 중복 없으면 바로 업로드
-      await doUpload(file, weekKey, data.title);
+      // 6. 중복 없으면 바로 업로드
+      await doUpload(file, weekKey, data.title, fileHash);
 
     } catch (e) {
       console.error(e);
@@ -164,9 +176,9 @@ export default function App() {
   };
 
   // 실제 업로드 실행
-  const doUpload = async (file: File, weekKey: string, title: string) => {
+  const doUpload = async (file: File, weekKey: string, title: string, fileHash?: string) => {
     try {
-      await uploadToCloud(file, weekKey, title);
+      await uploadToCloud(file, weekKey, title, fileHash);
       toast.success(`${weekKey} 클라우드 업로드 완료`);
     } catch (e) {
       console.error('Cloud upload error:', e);
@@ -179,9 +191,9 @@ export default function App() {
   // 덮어쓰기 확인 핸들러
   const handleUploadConfirm = async () => {
     if (!uploadConfirm) return;
-    const { file, weekKey, title } = uploadConfirm;
+    const { file, weekKey, title, fileHash } = uploadConfirm;
     setUploadConfirm(null);
-    await doUpload(file, weekKey, title);
+    await doUpload(file, weekKey, title, fileHash);
   };
 
   const handleUploadCancel = () => {
@@ -411,6 +423,7 @@ export default function App() {
           weekKey={uploadConfirm.weekKey}
           title={uploadConfirm.title}
           existingTitle={uploadConfirm.existingTitle}
+          contentChanged={true}
           onConfirm={handleUploadConfirm}
           onCancel={handleUploadCancel}
         />

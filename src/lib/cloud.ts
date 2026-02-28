@@ -9,6 +9,7 @@ export interface CloudFileInfo {
   filename?: string;
   uploadedAt?: string;
   url?: string;
+  fileHash?: string;
   error?: string;
 }
 
@@ -32,17 +33,30 @@ export async function fetchCloudFiles(): Promise<CloudFilesResponse> {
 }
 
 /**
+ * Compute SHA-256 hash of a File (browser Web Crypto API)
+ * ~70KB file → < 1ms
+ */
+export async function computeFileHash(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
  * Upload an excel file with auto-detected weekKey
  */
 export async function uploadToCloud(
   file: File,
   weekKey: string,
-  title: string
+  title: string,
+  fileHash?: string
 ): Promise<void> {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('weekKey', weekKey);
   formData.append('title', title);
+  if (fileHash) formData.append('fileHash', fileHash);
 
   const res = await fetch(`${BASE_URL}/upload`, {
     method: 'POST',

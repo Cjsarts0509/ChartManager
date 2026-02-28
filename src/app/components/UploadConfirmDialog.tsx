@@ -1,10 +1,11 @@
 import React from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ShieldAlert } from 'lucide-react';
 
 interface UploadConfirmDialogProps {
   weekKey: string;
   title: string;
   existingTitle?: string;
+  contentChanged?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -13,6 +14,7 @@ export const UploadConfirmDialog: React.FC<UploadConfirmDialogProps> = ({
   weekKey,
   title,
   existingTitle,
+  contentChanged = false,
   onConfirm,
   onCancel,
 }) => {
@@ -24,14 +26,31 @@ export const UploadConfirmDialog: React.FC<UploadConfirmDialogProps> = ({
       >
         {/* Icon + Title */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="bg-amber-100 p-2.5 rounded-full shrink-0">
-            <AlertTriangle size={24} className="text-amber-600" />
+          <div className={`p-2.5 rounded-full shrink-0 ${contentChanged ? 'bg-red-100' : 'bg-amber-100'}`}>
+            {contentChanged 
+              ? <ShieldAlert size={24} className="text-red-600" />
+              : <AlertTriangle size={24} className="text-amber-600" />
+            }
           </div>
           <div>
             <h3 className="font-bold text-gray-900">동일 주차 파일 존재</h3>
             <p className="text-sm text-gray-500 mt-0.5">덮어쓰시겠습니까?</p>
           </div>
         </div>
+
+        {/* Content Changed Warning */}
+        {contentChanged && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-start gap-2.5">
+            <ShieldAlert size={18} className="text-red-500 shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="text-red-700 font-bold">파일 내용이 다릅니다</p>
+              <p className="text-red-600 mt-0.5">
+                같은 주차이지만 기존 파일과 내용이 일치하지 않습니다.
+                의도된 수정인지 확인 후 덮어쓰기하세요.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Info */}
         <div className="bg-gray-50 rounded-lg p-4 mb-5 space-y-2 text-sm">
@@ -61,7 +80,11 @@ export const UploadConfirmDialog: React.FC<UploadConfirmDialogProps> = ({
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors text-sm font-bold"
+            className={`flex-1 px-4 py-2.5 text-white rounded-lg transition-colors text-sm font-bold ${
+              contentChanged 
+                ? 'bg-red-500 hover:bg-red-600' 
+                : 'bg-amber-500 hover:bg-amber-600'
+            }`}
           >
             덮어쓰기
           </button>
