@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { TopBar } from './components/TopBar';
 import { ListCard } from './components/ListCard';
 import { MobileView } from './components/MobileView';
+import { UploadConfirmDialog } from './components/UploadConfirmDialog';
 import { ProcessedData } from '../lib/types';
 import { parseExcel, parseExcelFromBuffer, extractWeekKey } from '../lib/excel';
 import { fetchCloudFiles, uploadToCloud, downloadFileAsBuffer, CloudFilesResponse } from '../lib/cloud';
@@ -24,6 +25,14 @@ export default function App() {
   const [lists, setLists] = useState<{ id: string }[]>([{ id: 'init-1' }]);
   const [printingId, setPrintingId] = useState<string | null>(null);
   const [printMode, setPrintMode] = useState<'normal' | 'a4' | null>(null);
+
+  // Upload confirm dialog state
+  const [uploadConfirm, setUploadConfirm] = useState<{
+    file: File;
+    weekKey: string;
+    title: string;
+    existingTitle?: string;
+  } | null>(null);
 
   // Cloud state
   const [cloudInfo, setCloudInfo] = useState<CloudFilesResponse | null>(null);
@@ -101,16 +110,26 @@ export default function App() {
 
   // ============================
   // File Upload Handler (단일 버튼)
-  // 1. 로컬 파싱 → weekKey 추출
-  // 2. 클라우드 업로드 (weekKey 기반 저장)
-  // 3. 클라우드에서 최신 2개 다시 불러오기
+  // 1. 용량 검증 (3MB 제한)
+  // 2. 로컬 파싱 → weekKey 추출
+  // 3. 중복 체크 → 확인 다이얼로그
+  // 4. 클라우드 업로드 (weekKey 기반 저장)
+  // 5. 클라우드에서 최신 2개 다시 불러오기
   // ============================
+  const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
+
   const handleFileUpload = async (file: File) => {
     try {
-      // 1. 로컬 파싱
+      // 1. 용량 검증
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`파일 용량 초과: ${(file.size / 1024 / 1024).toFixed(1)}MB\n최대 3MB까지 업로드 가능합니다`);
+        return;
+      }
+
+      // 2. 로컬 파싱
       const data = await parseExcel(file);
 
-      // 2. weekKey 추출
+      // 3. weekKey 추출
       const weekKey = extractWeekKey(data.title);
       if (!weekKey) {
         toast.error(`주차 정보를 찾을 수 없습니다: "${data.title}"\n파일 타이틀에 "YYYY년 NN주" 형식이 필요합니다`);
@@ -119,22 +138,55 @@ export default function App() {
 
       toast.success(`${data.title} (${weekKey}) 파싱 완료`);
 
-      // 3. 클라우드 업로드
-      try {
-        await uploadToCloud(file, weekKey, data.title);
-        toast.success(`${weekKey} 클라우드 업로드 완료`);
-      } catch (e) {
-        console.error('Cloud upload error:', e);
-        toast.error('클라우드 업로드 실패');
+      // 4. 중복 체크: 클라우드에 같은 weekKey가 이미 있는지 확인
+      const existingFile = [cloudInfo?.thisWeek, cloudInfo?.lastWeek].find(
+        (f) => f?.exists && f.weekKey === weekKey
+      );
+
+      if (existingFile) {
+        // 동일 weekKey 파일 존재 → 확인 다이얼로그 표시
+        setUploadConfirm({
+          file,
+          weekKey,
+          title: data.title,
+          existingTitle: existingFile.title || existingFile.filename,
+        });
+        return;
       }
 
-      // 4. 클라우드에서 최신 2개 다시 불러와서 this/last 자동 배치
-      await loadFromCloud(true);
+      // 5. 중복 없으면 바로 업로드
+      await doUpload(file, weekKey, data.title);
 
     } catch (e) {
       console.error(e);
       toast.error("파일 처리 실패");
     }
+  };
+
+  // 실제 업로드 실행
+  const doUpload = async (file: File, weekKey: string, title: string) => {
+    try {
+      await uploadToCloud(file, weekKey, title);
+      toast.success(`${weekKey} 클라우드 업로드 완료`);
+    } catch (e) {
+      console.error('Cloud upload error:', e);
+      toast.error('클라우드 업로드 실패');
+    }
+    // 클라우드에서 최신 2개 다시 불러와서 this/last 자동 배치
+    await loadFromCloud(true);
+  };
+
+  // 덮어쓰기 확인 핸들러
+  const handleUploadConfirm = async () => {
+    if (!uploadConfirm) return;
+    const { file, weekKey, title } = uploadConfirm;
+    setUploadConfirm(null);
+    await doUpload(file, weekKey, title);
+  };
+
+  const handleUploadCancel = () => {
+    setUploadConfirm(null);
+    toast.info('업로드 취소됨');
   };
 
   // List Handlers
@@ -352,6 +404,17 @@ export default function App() {
           `}
         }
       `}</style>
+
+      {/* Upload Confirm Dialog */}
+      {uploadConfirm && (
+        <UploadConfirmDialog
+          weekKey={uploadConfirm.weekKey}
+          title={uploadConfirm.title}
+          existingTitle={uploadConfirm.existingTitle}
+          onConfirm={handleUploadConfirm}
+          onCancel={handleUploadCancel}
+        />
+      )}
     </div>
   );
 }

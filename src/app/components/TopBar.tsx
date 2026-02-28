@@ -58,7 +58,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           >
             <Upload size={20} className="text-gray-500" />
             <span className="text-xs font-bold text-gray-600">엑셀 파일 업로드</span>
-            <span className="text-[10px] text-gray-400">주차 자동 인식</span>
+            <span className="text-[10px] text-gray-400">주차 자동 인식 · 최대 3MB</span>
             <input 
               type="file" 
               accept=".xlsx, .xls" 
