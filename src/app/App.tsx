@@ -6,6 +6,7 @@ import { UploadConfirmDialog } from './components/UploadConfirmDialog';
 import { ProcessedData } from '../lib/types';
 import { parseExcel, parseExcelFromBuffer, extractWeekKey } from '../lib/excel';
 import { fetchCloudFiles, uploadToCloud, downloadFileAsBuffer, computeFileHash, CloudFilesResponse } from '../lib/cloud';
+import { Store } from '../lib/constants';
 import { Toaster, toast } from 'sonner';
 
 // Custom hook for responsive breakpoint
@@ -39,11 +40,15 @@ export default function App() {
   const [cloudInfo, setCloudInfo] = useState<CloudFilesResponse | null>(null);
   const [cloudLoading, setCloudLoading] = useState(false);
 
+  // Store state (PC: 전체 공유)
+  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
+
   // Canvas State
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 50, y: 50 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
+  const canvasRef = useRef<HTMLDivElement>(null);
 
   const isMobile = useIsMobile();
 
@@ -218,15 +223,26 @@ export default function App() {
     setTimeout(() => { window.print(); setPrintingId(null); }, 100);
   };
 
-  // Canvas Interaction Handlers
-  const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey) {
+  // Canvas Interaction Handlers - use native event for preventDefault on passive wheel
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
       e.preventDefault();
-      const zoomSensitivity = 0.001;
-      const newScale = Math.min(Math.max(0.1, scale - e.deltaY * zoomSensitivity), 3);
-      setScale(newScale);
-    }
-  };
+      if (e.ctrlKey) {
+        const zoomSensitivity = 0.001;
+        setScale(prev => Math.min(Math.max(0.1, prev - e.deltaY * zoomSensitivity), 3));
+      } else {
+        const scrollSpeed = 1.5;
+        setPosition(prev => ({
+          x: prev.x - (e.shiftKey ? e.deltaY : e.deltaX) * scrollSpeed,
+          y: prev.y - (e.shiftKey ? 0 : e.deltaY) * scrollSpeed
+        }));
+      }
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, []);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
@@ -278,20 +294,22 @@ export default function App() {
           cloudInfo={cloudInfo}
           cloudLoading={cloudLoading}
           onRefreshCloud={() => loadFromCloud(false)}
+          selectedStore={selectedStore}
+          onSelectStore={setSelectedStore}
         />
       </div>
 
       {/* Canvas Area */}
       <div 
         className="flex-1 relative cursor-grab active:cursor-grabbing overflow-hidden canvas-area"
-        onWheel={handleWheel}
+        ref={canvasRef}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
         <div className="absolute top-4 left-4 z-40 bg-black/70 text-white px-3 py-1 rounded-full text-xs pointer-events-none canvas-hint">
-          Ctrl + 휠: 확대/축소 | 드래그: 이동
+          휠: 상하 이동 | Ctrl + 휠: 확대/축소 | 드래그: 자유 이동
         </div>
 
         {/* Scalable Content Container */}
@@ -320,6 +338,8 @@ export default function App() {
                 lastWeekTitle={lastWeekData.title}
                 onDelete={() => handleDeleteList(list.id)}
                 onPrint={handlePrintCard}
+                storeCode={selectedStore?.code}
+                storeName={selectedStore?.name}
               />
             </div>
           ))}

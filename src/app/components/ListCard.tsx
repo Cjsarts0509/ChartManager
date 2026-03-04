@@ -13,6 +13,8 @@ interface ListCardProps {
   lastWeekTitle: string;
   onDelete: () => void;
   onPrint: (id: string) => void;
+  storeCode?: string;
+  storeName?: string;
 }
 
 export const ListCard: React.FC<ListCardProps> = ({
@@ -22,7 +24,9 @@ export const ListCard: React.FC<ListCardProps> = ({
   title,
   lastWeekTitle,
   onDelete,
-  onPrint
+  onPrint,
+  storeCode,
+  storeName
 }) => {
   const [groupCode, setGroupCode] = useState("소설");
   const [limit, setLimit] = useState(20); 
@@ -177,14 +181,14 @@ export const ListCard: React.FC<ListCardProps> = ({
           <h3 className="font-bold text-sm">{title}</h3>
           <p className="text-[11px] text-[#888] mt-0.5 font-bold">{groupCode} 분야</p>
         </div>
-        <BookTable books={currentList} />
+        <BookTable books={currentList} storeCode={storeCode} storeName={storeName} />
 
         {/* Section 2: Last Week */}
         <div className="mt-6">
           <div className="text-center border-t border-black pt-2 pb-1">
              <h3 className="font-bold text-sm">{lastWeekTitle || "지난주 데이터 없음"}</h3>
           </div>
-          <BookTable books={pastList} />
+          <BookTable books={pastList} storeCode={storeCode} storeName={storeName} />
         </div>
       </div>
     </div>

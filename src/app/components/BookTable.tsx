@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookWithTrend } from '../lib/types';
 import { Minus } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -14,13 +14,62 @@ interface BookTableProps {
 export const BookTable: React.FC<BookTableProps> = ({ books, storeCode, storeName }) => {
   const [selectedBookForCover, setSelectedBookForCover] = useState<BookWithTrend | null>(null);
   const [selectedBookForKiosk, setSelectedBookForKiosk] = useState<BookWithTrend | null>(null);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
   // 비율: 순위(4.63) : ISBN(14.13) : 도서명(30.63) : 변동(5)
   const gridTemplate = "4.63fr 14.13fr 30.63fr 5fr";
 
+  const openKioskWindow = (book: BookWithTrend) => {
+    if (!storeCode) return;
+    const cleanIsbn = book.isbn.replace(/[-\s]/g, '');
+    const kioskUrl = `https://kiosk.kyobobook.co.kr/bookInfoInk?site=${storeCode}&barcode=${cleanIsbn}&ejkGb=KOR`;
+    const popupW = 540;
+    const popupH = Math.min(window.screen.availHeight - 100, 900);
+    const left = window.screenX + Math.round((window.outerWidth - popupW) / 2);
+    const top = window.screenY + 50;
+
+    const newWin = window.open('', `kiosk_${cleanIsbn}`, `width=${popupW},height=${popupH},left=${left},top=${top},scrollbars=yes,resizable=yes`);
+    if (!newWin) {
+      alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.');
+      return;
+    }
+
+    const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>${book.title} - 키오스크</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body{width:100%;height:100%;overflow:hidden;background:#fff}
+    iframe{width:100%;height:100%;border:none;display:block}
+    .print-btn{position:fixed;bottom:12px;right:12px;z-index:999;width:36px;height:36px;border-radius:50%;border:none;background:#2563eb;color:#fff;font-size:16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;opacity:0.7;transition:opacity 0.2s}
+    .print-btn:hover{opacity:1}
+    @media print{.print-btn{display:none}}
+  </style>
+</head>
+<body>
+  <button class="print-btn" onclick="window.print()" title="인쇄">&#x1F5A8;</button>
+  <iframe src="${kioskUrl}" title="${book.title}" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+</body>
+</html>`;
+
+    newWin.document.write(html);
+    newWin.document.close();
+  };
+
   const handleTitleClick = (book: BookWithTrend) => {
-    if (storeCode) {
+    if (!storeCode) return;
+    if (isMobile) {
       setSelectedBookForKiosk(book);
+    } else {
+      openKioskWindow(book);
     }
   };
 
