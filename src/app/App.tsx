@@ -100,6 +100,12 @@ export default function App() {
     }
   }, [selectedPart]);
 
+  const handleClearLists = useCallback(() => {
+    setLists([{ id: 'init-1' }]);
+    setPosition({ x: 50, y: 50 });
+    toast.success('리스트가 초기화되었습니다');
+  }, []);
+
   const isMobile = useIsMobile();
 
   // 합정점(049) 파트 설정 초기화 (1회성)
@@ -368,6 +374,7 @@ export default function App() {
           selectedPartId={selectedPartId}
           onSelectPart={setSelectedPartId}
           onLoadPartLists={handleLoadPartLists}
+          onClearLists={handleClearLists}
         />
       </div>
 

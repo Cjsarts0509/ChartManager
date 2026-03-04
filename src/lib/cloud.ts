@@ -112,11 +112,19 @@ function setLocalConfig(storeCode: string, categories: string[]) {
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(configs));
 }
 
+/** localStorage에서 특정 영업점 설정 삭제 */
+function removeLocalConfig(storeCode: string) {
+  const configs = getLocalConfigs();
+  delete configs[storeCode];
+  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(configs));
+}
+
 /**
  * 영업점별 조코드 설정 불러오기
  * 1) Supabase에서 조회 시도
- * 2) 실패 시 localStorage 폴백
- * 3) 둘 다 없으면 null (= 기본값 사용)
+ * 2) Supabase 성공 + 데이터 없음 → localStorage 캐시도 삭제 → null 반환
+ * 3) Supabase 실패(네트워크 오류) → localStorage 폴백
+ * 4) 둘 다 없으면 null (= 기본값 사용)
  */
 export async function fetchStoreCategoryConfig(storeCode: string): Promise<string[] | null> {
   // Try Supabase first
@@ -137,14 +145,18 @@ export async function fetchStoreCategoryConfig(storeCode: string): Promise<strin
         setLocalConfig(storeCode, rows[0].categories);
         return rows[0].categories;
       }
+      // Supabase 정상 응답이지만 데이터 없음 → 캐시 삭제
+      removeLocalConfig(storeCode);
+      return null;
     }
   } catch (e) {
     console.warn('Supabase category config fetch failed, using localStorage:', e);
+    // 네트워크 실패 시에만 localStorage 폴백
+    const local = getLocalConfigs();
+    return local[storeCode] || null;
   }
 
-  // Fallback: localStorage
-  const local = getLocalConfigs();
-  return local[storeCode] || null;
+  return null;
 }
 
 /**
@@ -217,11 +229,19 @@ function setLocalPartConfig(storeCode: string, parts: PartConfig[]) {
   localStorage.setItem(PART_CONFIG_KEY, JSON.stringify(configs));
 }
 
+/** localStorage에서 특정 영업점 파트 설정 삭제 */
+function removeLocalPartConfig(storeCode: string) {
+  const configs = getLocalPartConfigs();
+  delete configs[storeCode];
+  localStorage.setItem(PART_CONFIG_KEY, JSON.stringify(configs));
+}
+
 /**
  * 영업점별 파트 설정 불러오기
  * 1) Supabase에서 조회 시도
- * 2) 실패 시 localStorage 폴백
- * 3) 둘 다 없으면 null (= 기본값 사용)
+ * 2) Supabase 성공 + 데이터 없음 → localStorage 캐시도 삭제 → null 반환
+ * 3) Supabase 실패(네트워크 오류) → localStorage 폴백
+ * 4) 둘 다 없으면 null (= 기본값 사용)
  */
 export async function fetchStorePartConfig(storeCode: string): Promise<PartConfig[] | null> {
   // Try Supabase first — 기존 categories JSONB 컬럼에 파트 배열을 저장
@@ -244,16 +264,20 @@ export async function fetchStorePartConfig(storeCode: string): Promise<PartConfi
           setLocalPartConfig(storeCode, data.parts);
           return data.parts;
         }
-        // 레거시: string[] → 무시 (파트 미설정)
+        // 레거시: string[] → 파트 미설정으로 간주, 캐시 삭제
       }
+      // Supabase 정상 응답이지만 데이터 없음 → 캐시 삭제
+      removeLocalPartConfig(storeCode);
+      return null;
     }
   } catch (e) {
     console.warn('Supabase part config fetch failed, using localStorage:', e);
+    // 네트워크 실패 시에만 localStorage 폴백
+    const local = getLocalPartConfigs();
+    return local[storeCode] || null;
   }
 
-  // Fallback: localStorage
-  const local = getLocalPartConfigs();
-  return local[storeCode] || null;
+  return null;
 }
 
 /**

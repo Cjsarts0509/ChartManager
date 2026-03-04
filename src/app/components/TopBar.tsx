@@ -1,5 +1,5 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
-import { Upload, Plus, Printer, ExternalLink, RefreshCw, FileText, MapPin, Search, X, ChevronDown, Settings, Layers, Download } from 'lucide-react';
+import { Upload, Plus, Printer, ExternalLink, RefreshCw, FileText, MapPin, Search, X, ChevronDown, Settings, Layers, Download, Trash2 } from 'lucide-react';
 import { CloudFilesResponse } from '../../lib/cloud';
 import { STORES, Store } from '../../lib/constants';
 import { PartConfig } from '../../lib/cloud';
@@ -21,6 +21,7 @@ interface TopBarProps {
   selectedPartId?: string | null;
   onSelectPart?: (partId: string | null) => void;
   onLoadPartLists?: () => void;
+  onClearLists?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -39,7 +40,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   storeParts,
   selectedPartId,
   onSelectPart,
-  onLoadPartLists
+  onLoadPartLists,
+  onClearLists
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showStorePanel, setShowStorePanel] = useState(false);
@@ -326,7 +328,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           </div>
 
           {/* Center: 파트 선택 */}
-          <div className="flex-1 relative" ref={partPanelRef}>
+          <div className="flex-[0.8] relative" ref={partPanelRef}>
             <button
               onClick={() => { if (hasParts) { setShowPartPanel(prev => !prev); setShowStorePanel(false); } }}
               className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all border ${
@@ -346,7 +348,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 </span>
               ) : (
                 <span className="flex-1 text-left text-gray-400">
-                  {!selectedStore ? '영업점을 먼저 선택하세요' : hasParts ? '파��를 선택하세요' : '설정된 파트가 없습니다'}
+                  {!selectedStore ? '영업점을 먼저 선택하세요' : hasParts ? '파를 선택하세요' : '설정된 파트가 없습니다'}
                 </span>
               )}
               {selectedPart && (
@@ -397,19 +399,28 @@ export const TopBar: React.FC<TopBarProps> = ({
             )}
           </div>
 
-          {/* Right: 리스트 불러오기 버튼 */}
-          <button
-            onClick={onLoadPartLists}
-            disabled={!selectedPart}
-            className={`flex items-center gap-1.5 px-4 rounded-lg text-xs transition-all border shrink-0 ${
-              selectedPart
-                ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600 cursor-pointer'
-                : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-            }`}
-          >
-            <Download size={13} />
-            <span className="font-semibold whitespace-nowrap">리스트 불러오기</span>
-          </button>
+          {/* Right: 리스트 불러오기 + 초기화 버튼 */}
+          <div className="flex gap-1.5 shrink-0">
+            <button
+              onClick={onLoadPartLists}
+              disabled={!selectedPart}
+              className={`flex items-center gap-1.5 px-3 rounded-lg text-xs transition-all border ${
+                selectedPart
+                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600 cursor-pointer'
+                  : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+              }`}
+            >
+              <Download size={13} />
+              <span className="font-semibold whitespace-nowrap">리스트 불러오기</span>
+            </button>
+            <button
+              onClick={onClearLists}
+              className="flex items-center gap-1 px-3 rounded-lg text-xs transition-all border bg-gray-50 hover:bg-red-50 text-gray-500 hover:text-red-600 border-gray-200 hover:border-red-200"
+            >
+              <Trash2 size={13} />
+              <span className="font-semibold whitespace-nowrap">초기화</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
