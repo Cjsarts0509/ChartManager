@@ -15,6 +15,10 @@ interface ListCardProps {
   onPrint: (id: string) => void;
   storeCode?: string;
   storeName?: string;
+  availableCategories?: string[];
+  categoryRanks?: Record<string, number>;
+  defaultGroupCode?: string;
+  defaultLimit?: number;
 }
 
 export const ListCard: React.FC<ListCardProps> = ({
@@ -26,10 +30,43 @@ export const ListCard: React.FC<ListCardProps> = ({
   onDelete,
   onPrint,
   storeCode,
-  storeName
+  storeName,
+  availableCategories,
+  categoryRanks,
+  defaultGroupCode,
+  defaultLimit
 }) => {
-  const [groupCode, setGroupCode] = useState("소설");
-  const [limit, setLimit] = useState(20); 
+  const categories = availableCategories && availableCategories.length > 0 ? availableCategories : CATEGORIES;
+  const [groupCode, setGroupCode] = useState(defaultGroupCode || categories[0] || "소설");
+  const [limit, setLimit] = useState(() => {
+    if (defaultLimit) return defaultLimit;
+    const first = defaultGroupCode || categories[0];
+    return (first && categoryRanks?.[first]) || 20;
+  });
+
+  // defaultGroupCode/defaultLimit 변경 시 동기화 (파트 전환 등)
+  React.useEffect(() => {
+    if (defaultGroupCode) {
+      setGroupCode(defaultGroupCode);
+      setLimit(defaultLimit || categoryRanks?.[defaultGroupCode] || 20);
+    }
+  }, [defaultGroupCode, defaultLimit]);
+
+  // categories가 변경되었을 때 현재 groupCode가 목록에 없으면 첫 번째로 리셋
+  React.useEffect(() => {
+    if (!defaultGroupCode && !categories.includes(groupCode)) {
+      const first = categories[0] || "소설";
+      setGroupCode(first);
+      setLimit(categoryRanks?.[first] || 20);
+    }
+  }, [categories, groupCode, categoryRanks, defaultGroupCode]);
+
+  // groupCode 변경 시 해당 카테고리의 설정 순위로 자동 변경
+  React.useEffect(() => {
+    if (categoryRanks && categoryRanks[groupCode]) {
+      setLimit(categoryRanks[groupCode]);
+    }
+  }, [groupCode, categoryRanks]);
 
   // 1. 이번주 데이터 계산 (Top List)
   const currentList = useMemo(() => {
@@ -153,7 +190,7 @@ export const ListCard: React.FC<ListCardProps> = ({
               onChange={(e) => setGroupCode(e.target.value)}
               className="border border-gray-300 rounded px-1 py-0.5 text-sm cursor-pointer"
             >
-              {CATEGORIES.map(cat => (
+              {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>

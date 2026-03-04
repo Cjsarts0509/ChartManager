@@ -58,6 +58,7 @@ app.get(`${PREFIX}/health`, (c) => {
 //   - "file": the excel file
 //   - "weekKey": e.g. "2026-02-02" (year-month-week, extracted from A1 title by frontend)
 //   - "title": the full title string from the excel (e.g. "2026년 2월 2주간 베스트셀러")
+//   - "fileHash": the hash of the file for deduplication
 // ============================================================
 app.post(`${PREFIX}/upload`, async (c) => {
   try {
@@ -65,6 +66,7 @@ app.post(`${PREFIX}/upload`, async (c) => {
     const file = formData.get("file") as File | null;
     const weekKey = formData.get("weekKey") as string | null;
     const title = formData.get("title") as string | null;
+    const fileHash = formData.get("fileHash") as string | null;
 
     if (!file) {
       return c.json({ error: "No file provided" }, 400);
@@ -98,6 +100,7 @@ app.post(`${PREFIX}/upload`, async (c) => {
       filename: file.name,
       uploadedAt: new Date().toISOString(),
       storagePath,
+      fileHash,
     });
 
     console.log(`File uploaded: weekKey=${weekKey}, file=${file.name}`);
@@ -159,6 +162,7 @@ app.get(`${PREFIX}/files`, async (c) => {
             filename: entry.filename,
             uploadedAt: entry.uploadedAt,
             url: data.signedUrl,
+            fileHash: entry.fileHash || null,
           };
         }
       } else {

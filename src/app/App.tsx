@@ -3,9 +3,10 @@ import { TopBar } from './components/TopBar';
 import { ListCard } from './components/ListCard';
 import { MobileView } from './components/MobileView';
 import { UploadConfirmDialog } from './components/UploadConfirmDialog';
+import { CategoryConfigDialog } from './components/CategoryConfigDialog';
 import { ProcessedData } from '../lib/types';
 import { parseExcel, parseExcelFromBuffer, extractWeekKey } from '../lib/excel';
-import { fetchCloudFiles, uploadToCloud, downloadFileAsBuffer, computeFileHash, CloudFilesResponse } from '../lib/cloud';
+import { fetchCloudFiles, uploadToCloud, downloadFileAsBuffer, computeFileHash, CloudFilesResponse, fetchStorePartConfig, PartConfig, getDefaultParts, resetStorePartConfig } from '../lib/cloud';
 import { Store } from '../lib/constants';
 import { Toaster, toast } from 'sonner';
 
@@ -23,7 +24,7 @@ function useIsMobile(breakpoint = 768) {
 export default function App() {
   const [thisWeekData, setThisWeekData] = useState<ProcessedData>({ title: "", books: [] });
   const [lastWeekData, setLastWeekData] = useState<ProcessedData>({ title: "", books: [] });
-  const [lists, setLists] = useState<{ id: string }[]>([{ id: 'init-1' }]);
+  const [lists, setLists] = useState<{ id: string; defaultGroupCode?: string; defaultLimit?: number }[]>([{ id: 'init-1' }]);
   const [printingId, setPrintingId] = useState<string | null>(null);
   const [printMode, setPrintMode] = useState<'normal' | 'a4' | null>(null);
 
@@ -43,6 +44,18 @@ export default function App() {
   // Store state (PC: 전체 공유)
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
 
+  // Part Config state (영업점별 파트/조코드 설정)
+  const [showCategoryConfig, setShowCategoryConfig] = useState(false);
+  const [storeParts, setStoreParts] = useState<PartConfig[]>([]);
+  const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
+
+  // Derived: 선택된 파트에서 카테고리 목록 + 순위 맵
+  const selectedPart = storeParts.find(p => p.id === selectedPartId) || null;
+  const activeCategories = selectedPart ? selectedPart.categories.map(c => c.code) : null;
+  const categoryRanks = selectedPart
+    ? Object.fromEntries(selectedPart.categories.map(c => [c.code, c.rank]))
+    : undefined;
+
   // Canvas State
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 50, y: 50 });
@@ -50,7 +63,61 @@ export default function App() {
   const dragStart = useRef({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  // 영업점 변경 시 파트 설정 불러오기
+  useEffect(() => {
+    if (!selectedStore) {
+      setStoreParts([]);
+      setSelectedPartId(null);
+      return;
+    }
+    let cancelled = false;
+    fetchStorePartConfig(selectedStore.code).then(config => {
+      if (cancelled) return;
+      if (config && config.length > 0) {
+        setStoreParts(config);
+        setSelectedPartId(config[0].id);
+      } else {
+        setStoreParts(getDefaultParts());
+        setSelectedPartId(getDefaultParts()[0].id);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [selectedStore]);
+
+  // 파트의 조코드별 ListCard 수동 불러오기
+  const handleLoadPartLists = useCallback(() => {
+    if (selectedPart && selectedPart.categories.length > 0) {
+      const autoLists = selectedPart.categories.map((cat, idx) => ({
+        id: `part-${selectedPart.id}-cat-${idx}`,
+        defaultGroupCode: cat.code,
+        defaultLimit: cat.rank,
+      }));
+      setLists(autoLists);
+      setPosition({ x: 50, y: 50 });
+      toast.success(`${selectedPart.name} 파트의 ${selectedPart.categories.length}개 리스트를 불러왔습니다`);
+    } else {
+      toast.info('선택된 파트에 등록된 조코드가 없습니다');
+    }
+  }, [selectedPart]);
+
   const isMobile = useIsMobile();
+
+  // 합정점(049) 파트 설정 초기화 (1회성)
+  useEffect(() => {
+    const RESET_KEY = 'hapjeong_part_reset_done_v1';
+    if (!localStorage.getItem(RESET_KEY)) {
+      resetStorePartConfig('049').then(() => {
+        localStorage.setItem(RESET_KEY, 'true');
+        console.log('합정점(049) 파트 설정 기본값으로 초기화 완료');
+        // 현재 합정점이 선택되어 있다면 즉시 반영
+        if (selectedStore?.code === '049') {
+          const defaults = getDefaultParts();
+          setStoreParts(defaults);
+          setSelectedPartId(defaults[0].id);
+        }
+      }).catch(e => console.warn('합정점 초기화 실패:', e));
+    }
+  }, []);
 
   // ============================
   // Cloud: Fetch & Download (자동 정렬)
@@ -296,6 +363,11 @@ export default function App() {
           onRefreshCloud={() => loadFromCloud(false)}
           selectedStore={selectedStore}
           onSelectStore={setSelectedStore}
+          onOpenCategoryConfig={() => setShowCategoryConfig(true)}
+          storeParts={storeParts}
+          selectedPartId={selectedPartId}
+          onSelectPart={setSelectedPartId}
+          onLoadPartLists={handleLoadPartLists}
         />
       </div>
 
@@ -340,6 +412,10 @@ export default function App() {
                 onPrint={handlePrintCard}
                 storeCode={selectedStore?.code}
                 storeName={selectedStore?.name}
+                availableCategories={activeCategories || undefined}
+                categoryRanks={categoryRanks}
+                defaultGroupCode={list.defaultGroupCode}
+                defaultLimit={list.defaultLimit}
               />
             </div>
           ))}
@@ -446,6 +522,28 @@ export default function App() {
           contentChanged={true}
           onConfirm={handleUploadConfirm}
           onCancel={handleUploadCancel}
+        />
+      )}
+
+      {/* Category Config Dialog */}
+      {showCategoryConfig && (
+        <CategoryConfigDialog
+          open={showCategoryConfig}
+          onClose={() => setShowCategoryConfig(false)}
+          initialStore={selectedStore}
+          onSaved={(storeCode, parts) => {
+            // 현재 선택된 영업점과 같으면 바로 반영
+            if (selectedStore && selectedStore.code === storeCode) {
+              setStoreParts(parts);
+              if (parts.length > 0) {
+                // 기존 선택 파트가 있으면 유지, 없으면 첫 번째
+                const stillExists = parts.find(p => p.id === selectedPartId);
+                if (!stillExists) setSelectedPartId(parts[0].id);
+              } else {
+                setSelectedPartId(null);
+              }
+            }
+          }}
         />
       )}
     </div>

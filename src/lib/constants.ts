@@ -1,7 +1,7 @@
 // lib/constants.ts
 export const CATEGORIES = [
   "종합베스트",
-  "시/에세이", // ★ 추가됨 (종합베스트와 동일한 엑셀 영역 사용)
+  "시/에세이", 
   "TOEIC/TOEFL",
   "가정생활",
   "건강",
