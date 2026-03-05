@@ -99,7 +99,8 @@ const PartManageDialog: React.FC<{
       setLocalParts(deepCloneParts(parts));
       setDeleteTarget(null);
     }
-  }, [open, parts]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   if (!open) return null;
 
@@ -432,14 +433,15 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({
 
   const toggleActive = (code: string, e: React.MouseEvent) => {
     const currentIndex = activeCategories.findIndex(c => c.code === code);
+    if (currentIndex === -1) return; // safety: 못 찾으면 무시
     setSelectedInactive(new Set());
     setSelectedActive(prev => {
       const next = new Set(prev);
-      if (e.shiftKey && lastClickedActiveIndex !== null) {
+      if (e.shiftKey && lastClickedActiveIndex !== null && lastClickedActiveIndex < activeCategories.length) {
         const start = Math.min(currentIndex, lastClickedActiveIndex);
-        const end = Math.max(currentIndex, lastClickedActiveIndex);
+        const end = Math.min(Math.max(currentIndex, lastClickedActiveIndex), activeCategories.length - 1);
         for (let i = start; i <= end; i++) {
-          next.add(activeCategories[i].code);
+          if (activeCategories[i]) next.add(activeCategories[i].code);
         }
       } else if (e.ctrlKey || e.metaKey) {
         next.has(code) ? next.delete(code) : next.add(code);
@@ -561,9 +563,12 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({
     // 선택된 파트가 삭제되었으면 첫 번째로 변경
     if (selectedPartId && !newParts.find(p => p.id === selectedPartId)) {
       setSelectedPartId(newParts.length > 0 ? newParts[0].id : null);
-      setSelectedActive(new Set());
-      setSelectedInactive(new Set());
     }
+    // 파트 구조 변경 후 항상 선택/인덱스 상태 초기화
+    setSelectedActive(new Set());
+    setSelectedInactive(new Set());
+    setLastClickedActiveIndex(null);
+    setLastClickedInactiveIndex(null);
   };
 
   if (!open) return null;
@@ -677,6 +682,8 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({
                           setShowPartDropdown(false);
                           setSelectedActive(new Set());
                           setSelectedInactive(new Set());
+                          setLastClickedActiveIndex(null);
+                          setLastClickedInactiveIndex(null);
                         }}
                         className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
                           selectedPartId === part.id ? 'bg-blue-50' : 'hover:bg-gray-50'
