@@ -69,6 +69,9 @@ export async function uploadToCloud(
     const text = await res.text();
     throw new Error(`Upload failed: ${res.status} ${text}`);
   }
+
+  // 감사 로그 (업로드 성공 후, 실패해도 무시)
+  writeAuditLog('file_upload', null, `${title} (${weekKey}) - ${file.name}`);
 }
 
 /**
@@ -186,6 +189,10 @@ export async function saveStoreCategoryConfig(storeCode: string, categories: str
     });
     if (!res.ok) {
       console.warn('Supabase category config save failed:', res.status, await res.text());
+    } else {
+      // 감사 로그 (저장 성공 후, 실패해도 무시)
+      const categoryNames = categories.join(', ');
+      writeAuditLog('config_save', storeCode, `조코드: ${categoryNames}`);
     }
   } catch (e) {
     console.warn('Supabase category config save failed:', e);
@@ -308,6 +315,10 @@ export async function saveStorePartConfig(storeCode: string, parts: PartConfig[]
     });
     if (!res.ok) {
       console.warn('Supabase part config save failed:', res.status, await res.text());
+    } else {
+      // 감사 로그 (저장 성공 후, 실패해도 무시)
+      const partNames = parts.map(p => p.name).join(', ');
+      writeAuditLog('config_save', storeCode, `파트: ${partNames}`);
     }
   } catch (e) {
     console.warn('Supabase part config save failed:', e);
@@ -329,4 +340,59 @@ export function getDefaultParts(): PartConfig[] {
 export async function resetStorePartConfig(storeCode: string): Promise<void> {
   const defaultParts = getDefaultParts();
   await saveStorePartConfig(storeCode, defaultParts);
+}
+
+// ============================
+// Audit Log (작업 기록)
+// ============================
+
+const AUDIT_TABLE = 'audit_log';
+
+/** IP 주소 가져오기 (캐시) */
+let cachedIp: string | null = null;
+async function getClientIp(): Promise<string> {
+  if (cachedIp) return cachedIp;
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    cachedIp = data.ip;
+    return data.ip;
+  } catch {
+    return 'unknown';
+  }
+}
+
+/**
+ * 감사 로그 기록
+ * @param action - 'file_upload' | 'config_save'
+ * @param storeCode - 영업점 코드
+ * @param detail - 추가 정보 (파일명, 파트명 등)
+ */
+export async function writeAuditLog(
+  action: string,
+  storeCode: string | null,
+  detail?: string
+): Promise<void> {
+  try {
+    const ip = await getClientIp();
+    const userAgent = navigator.userAgent;
+
+    await fetch(`${SUPABASE_REST}/${AUDIT_TABLE}`, {
+      method: 'POST',
+      headers: {
+        'apikey': publicAnonKey,
+        'Authorization': `Bearer ${publicAnonKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action,
+        store_code: storeCode,
+        detail,
+        ip_address: ip,
+        user_agent: userAgent,
+      }),
+    });
+  } catch (e) {
+    console.warn('Audit log write failed:', e);
+  }
 }
