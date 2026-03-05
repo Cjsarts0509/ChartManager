@@ -2,8 +2,9 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Book, BookWithTrend } from '../../lib/types';
 import { getComparison } from '../../lib/compare';
 import { CATEGORIES, STORES, Store } from '../../lib/constants';
+import { fetchStorePartConfig, getDefaultParts, PartConfig } from '../../lib/cloud';
 import { BookTable } from './BookTable';
-import { ChevronDown, FileSpreadsheet, MapPin, X, Search, RefreshCw, Cloud } from 'lucide-react';
+import { ChevronDown, FileSpreadsheet, MapPin, X, Search, RefreshCw, Cloud, Layers } from 'lucide-react';
 import { CloudFilesResponse } from '../../lib/cloud';
 
 interface MobileViewProps {
@@ -31,6 +32,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
   const [showStorePanel, setShowStorePanel] = useState(false);
   const [storeSearch, setStoreSearch] = useState("");
 
+  // Part state
+  const [storeParts, setStoreParts] = useState<PartConfig[]>([]);
+  const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
+  const [partsLoading, setPartsLoading] = useState(false);
+
   const storePanelRef = useRef<HTMLDivElement>(null);
 
   // 영업점 패널 외부 클릭 시 닫기
@@ -46,6 +52,40 @@ export const MobileView: React.FC<MobileViewProps> = ({
     return () => document.removeEventListener('mousedown', handler);
   }, [showStorePanel]);
 
+  // 영업점 변경 시 파트 설정 불러오기
+  useEffect(() => {
+    if (!selectedStore) {
+      setStoreParts([]);
+      setSelectedPartId(null);
+      return;
+    }
+    let cancelled = false;
+    setPartsLoading(true);
+    fetchStorePartConfig(selectedStore.code).then(config => {
+      if (cancelled) return;
+      if (config && config.length > 0) {
+        setStoreParts(config);
+        setSelectedPartId(config[0].id);
+      } else {
+        const defaults = getDefaultParts();
+        setStoreParts(defaults);
+        setSelectedPartId(defaults[0].id);
+      }
+    }).finally(() => {
+      if (!cancelled) setPartsLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [selectedStore]);
+
+  // 파트 변경 시 → 해당 파트의 첫 번째 조코드로 자동 전환
+  const selectedPart = storeParts.find(p => p.id === selectedPartId) || null;
+  useEffect(() => {
+    if (selectedPart && selectedPart.categories.length > 0) {
+      setGroupCode(selectedPart.categories[0].code);
+      setLimit(selectedPart.categories[0].rank);
+    }
+  }, [selectedPartId]);
+
   const hasData = thisWeekBooks.length > 0 || lastWeekBooks.length > 0;
 
   // 검색 필터링된 영업점
@@ -54,6 +94,28 @@ export const MobileView: React.FC<MobileViewProps> = ({
     const q = storeSearch.trim().toLowerCase();
     return STORES.filter(s => s.name.toLowerCase().includes(q) || s.code.includes(q));
   }, [storeSearch]);
+
+  // 파트에 속한 조코드만 표시 (파트 선택 시)
+  const availableCategories = useMemo(() => {
+    if (selectedPart) {
+      return selectedPart.categories.map(c => c.code);
+    }
+    return CATEGORIES;
+  }, [selectedPart]);
+
+  // 조코드별 순위 맵 (파트에서 설정한 rank)
+  const categoryRanks = useMemo(() => {
+    if (!selectedPart) return undefined;
+    return Object.fromEntries(selectedPart.categories.map(c => [c.code, c.rank]));
+  }, [selectedPart]);
+
+  // 조코드 변경 시 해당 파트의 rank로 limit 자동 설정
+  const handleGroupCodeChange = (code: string) => {
+    setGroupCode(code);
+    if (categoryRanks && categoryRanks[code]) {
+      setLimit(categoryRanks[code]);
+    }
+  };
 
   // 이번주 리스트
   const currentList = useMemo(() => {
@@ -185,15 +247,47 @@ export const MobileView: React.FC<MobileViewProps> = ({
           )}
         </div>
 
-        {/* Row 2: 조코드 + 순위상한 */}
+        {/* Row 2: 파트 선택 탭 (영업점 선택 시에만 표시) */}
+        {selectedStore && storeParts.length > 0 && (
+          <div className="px-3 py-1">
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+              <Layers size={12} className="text-gray-400 shrink-0" />
+              {partsLoading ? (
+                <span className="text-xs text-gray-400 px-2">불러오는 중...</span>
+              ) : (
+                storeParts.map(part => {
+                  const isActive = selectedPartId === part.id;
+                  return (
+                    <button
+                      key={part.id}
+                      onClick={() => setSelectedPartId(part.id)}
+                      className={`px-2.5 py-1 rounded-full text-xs whitespace-nowrap transition-all ${
+                        isActive
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'bg-gray-100 text-gray-600 active:bg-gray-200'
+                      }`}
+                    >
+                      {part.name}
+                      <span className={`ml-1 ${isActive ? 'text-emerald-200' : 'text-gray-400'}`}>
+                        {part.categories.length}
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Row 3: 조코드 + 순위상한 */}
         <div className="flex items-center gap-2 px-3 py-1.5">
           {/* 조코드 드롭다운 */}
           <select
             value={groupCode}
-            onChange={(e) => setGroupCode(e.target.value)}
+            onChange={(e) => handleGroupCodeChange(e.target.value)}
             className="flex-1 border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white min-w-0"
           >
-            {CATEGORIES.map(cat => (
+            {availableCategories.map(cat => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
@@ -247,7 +341,12 @@ export const MobileView: React.FC<MobileViewProps> = ({
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-3">
               <div className="text-center border-b-2 border-black py-2 bg-white">
                 <h3 className="text-sm font-bold text-gray-900">{title || '이번주 데이터 없음'}</h3>
-                <p className="text-[11px] text-gray-500 mt-0.5 font-semibold">{groupCode} 분야</p>
+                <p className="text-[11px] text-gray-500 mt-0.5 font-semibold">
+                  {selectedPart && selectedPart.name !== '기본' && (
+                    <span className="text-emerald-600 mr-1">[{selectedPart.name}]</span>
+                  )}
+                  {groupCode} 분야
+                </p>
               </div>
               {currentList.length > 0 ? (
                 <BookTable books={currentList} storeCode={selectedStore?.code} storeName={selectedStore?.name} />

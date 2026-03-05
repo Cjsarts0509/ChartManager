@@ -363,10 +363,34 @@ async function getClientIp(): Promise<string> {
 }
 
 /**
+ * 에러 로그 중복 방지 throttle (5분)
+ * key = action + detail 해시 → 5분 내 같은 에러 재기록 방지
+ */
+const recentErrorKeys = new Map<string, number>();
+const ERROR_THROTTLE_MS = 5 * 60 * 1000; // 5분
+
+function isErrorThrottled(action: string, detail?: string): boolean {
+  const key = `${action}::${detail || ''}`;
+  const now = Date.now();
+  const lastTime = recentErrorKeys.get(key);
+  if (lastTime && now - lastTime < ERROR_THROTTLE_MS) {
+    return true; // 아직 5분 안 지남 → 스킵
+  }
+  recentErrorKeys.set(key, now);
+  // 오래된 엔트리 정리 (100개 초과 시)
+  if (recentErrorKeys.size > 100) {
+    for (const [k, t] of recentErrorKeys) {
+      if (now - t > ERROR_THROTTLE_MS) recentErrorKeys.delete(k);
+    }
+  }
+  return false;
+}
+
+/**
  * 감사 로그 기록
- * @param action - 'file_upload' | 'config_save'
+ * @param action - 'file_upload' | 'config_save' | 'error' | 'error_global'
  * @param storeCode - 영업점 코드
- * @param detail - 추가 정보 (파일명, 파트명 등)
+ * @param detail - 추가 정보 (파일명, 파트명, 에러 메시지 등)
  */
 export async function writeAuditLog(
   action: string,
@@ -395,4 +419,44 @@ export async function writeAuditLog(
   } catch (e) {
     console.warn('Audit log write failed:', e);
   }
+}
+
+/**
+ * 에러 전용 로그 (5분 중복 방지 throttle 적용)
+ * @param source - 에러 발생 위치 (예: 'cloud_fetch', 'upload', 'global_error')
+ * @param error - Error 객체 또는 메시지
+ * @param storeCode - 영업점 코드 (있으면)
+ */
+export async function writeErrorLog(
+  source: string,
+  error: unknown,
+  storeCode?: string | null
+): Promise<void> {
+  const message = error instanceof Error
+    ? `${error.name}: ${error.message}`
+    : String(error);
+  const detail = `[${source}] ${message}`.slice(0, 1000); // 최대 1000자
+
+  // throttle 체크
+  if (isErrorThrottled('error', detail)) {
+    return;
+  }
+
+  await writeAuditLog('error', storeCode || null, detail);
+}
+
+/**
+ * 전역 에러 핸들러 설치 (앱 초기화 시 1회 호출)
+ * - window.onerror: 동기 에러
+ * - window.onunhandledrejection: 비동기 Promise 에러
+ */
+export function installGlobalErrorLogger(): void {
+  window.onerror = (message, source, lineno, colno, error) => {
+    const detail = `${message} at ${source}:${lineno}:${colno}`;
+    writeErrorLog('global_onerror', error || detail);
+  };
+
+  window.onunhandledrejection = (event: PromiseRejectionEvent) => {
+    writeErrorLog('global_unhandled_promise', event.reason);
+  };
 }

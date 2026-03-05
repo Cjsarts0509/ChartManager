@@ -6,7 +6,7 @@ import { UploadConfirmDialog } from './components/UploadConfirmDialog';
 import { CategoryConfigDialog } from './components/CategoryConfigDialog';
 import { ProcessedData } from '../lib/types';
 import { parseExcel, parseExcelFromBuffer, extractWeekKey } from '../lib/excel';
-import { fetchCloudFiles, uploadToCloud, downloadFileAsBuffer, computeFileHash, CloudFilesResponse, fetchStorePartConfig, PartConfig, getDefaultParts, resetStorePartConfig } from '../lib/cloud';
+import { fetchCloudFiles, uploadToCloud, downloadFileAsBuffer, computeFileHash, CloudFilesResponse, fetchStorePartConfig, PartConfig, getDefaultParts, resetStorePartConfig, installGlobalErrorLogger, writeErrorLog } from '../lib/cloud';
 import { Store } from '../lib/constants';
 import { Toaster, toast } from 'sonner';
 
@@ -62,6 +62,11 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // 전역 에러 핸들러 설치 (1회)
+  useEffect(() => {
+    installGlobalErrorLogger();
+  }, []);
 
   // 영업점 변경 시 파트 설정 불러오기
   useEffect(() => {
@@ -169,6 +174,7 @@ export default function App() {
       }
     } catch (e) {
       console.error('Cloud fetch error:', e);
+      writeErrorLog('cloud_fetch', e);
       if (!silent) toast.error('클라우드 연결 실패');
     } finally {
       setCloudLoading(false);
@@ -249,6 +255,7 @@ export default function App() {
 
     } catch (e) {
       console.error(e);
+      writeErrorLog('file_parse', e);
       toast.error("파일 처리 실패");
     }
   };
@@ -260,6 +267,7 @@ export default function App() {
       toast.success(`${weekKey} 클라우드 업로드 완료`);
     } catch (e) {
       console.error('Cloud upload error:', e);
+      writeErrorLog('cloud_upload', e);
       toast.error('클라우드 업로드 실패');
     }
     // 클라우드에서 최신 2개 다시 불러와서 this/last 자동 배치
