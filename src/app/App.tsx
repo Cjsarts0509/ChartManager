@@ -69,13 +69,17 @@ export default function App() {
     installGlobalErrorLogger();
   }, []);
 
-  // 영업점 변경 시 파트 설정 불러오기
+  // 영업점 변경 시 파트 설정 불러오기 + 리스트 초기화
   useEffect(() => {
     if (!selectedStore) {
       setStoreParts([]);
       setSelectedPartId(null);
       return;
     }
+    // 영업점 변경 시 리스트를 초기 상태로 리셋
+    setLists([{ id: 'init-1' }]);
+    setPosition({ x: 50, y: 50 });
+
     let cancelled = false;
     fetchStorePartConfig(selectedStore.code).then(config => {
       if (cancelled) return;
