@@ -442,13 +442,29 @@ export async function writeErrorLog(
  * - window.onerror: 동기 에러
  * - window.onunhandledrejection: 비동기 Promise 에러
  */
+// 브라우저 확장/번역 등 외부 DOM 조작으로 발생하는 무해한 에러 필터
+const IGNORED_ERRORS = [
+  'removeChild',
+  'insertBefore',
+  'The node to be removed is not a child',
+  'NotFoundError',
+];
+
+function isIgnoredError(msg: string): boolean {
+  return IGNORED_ERRORS.some(keyword => msg.includes(keyword));
+}
+
 export function installGlobalErrorLogger(): void {
   window.onerror = (message, source, lineno, colno, error) => {
-    const detail = `${message} at ${source}:${lineno}:${colno}`;
+    const msg = String(message);
+    if (isIgnoredError(msg)) return;
+    const detail = `${msg} at ${source}:${lineno}:${colno}`;
     writeErrorLog('global_onerror', error || detail);
   };
 
   window.onunhandledrejection = (event: PromiseRejectionEvent) => {
+    const msg = String(event.reason);
+    if (isIgnoredError(msg)) return;
     writeErrorLog('global_unhandled_promise', event.reason);
   };
 }
