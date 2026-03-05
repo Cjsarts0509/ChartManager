@@ -161,7 +161,9 @@ export default function App() {
         }
       }
     } catch (e) {
-      console.error('Cloud fetch error:', e);
+      // Edge Function 미배포 또는 네트워크 단절 시 조용히 처리
+      // (silent=true인 초기 로딩에서는 사용자에게 노출 안 됨)
+      console.warn('Cloud fetch warning:', e instanceof Error ? e.message : e);
       writeErrorLog('cloud_fetch', e);
       if (!silent) toast.error('클라우드 연결 실패');
     } finally {

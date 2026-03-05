@@ -20,6 +20,7 @@ const supabase = () =>
   try {
     const sb = supabase();
     const { data: buckets } = await sb.storage.listBuckets();
+    // deno-lint-ignore no-explicit-any
     const bucketExists = buckets?.some((b: any) => b.name === BUCKET_NAME);
     if (!bucketExists) {
       await sb.storage.createBucket(BUCKET_NAME, { public: false });
@@ -47,18 +48,13 @@ app.use(
   })
 );
 
-// Health check
+// Health check — version 3 = shelf-info 라우트 포함 확인용
 app.get(`${PREFIX}/health`, (c) => {
-  return c.json({ status: "ok" });
+  return c.json({ status: "ok", v: 3 });
 });
 
 // ============================================================
-// POST /upload - Upload an Excel file keyed by weekKey
-// Body: FormData with:
-//   - "file": the excel file
-//   - "weekKey": e.g. "2026-02-02" (year-month-week, extracted from A1 title by frontend)
-//   - "title": the full title string from the excel (e.g. "2026년 2월 2주간 베스트셀러")
-//   - "fileHash": the hash of the file for deduplication
+// POST /upload
 // ============================================================
 app.post(`${PREFIX}/upload`, async (c) => {
   try {
@@ -78,7 +74,6 @@ app.post(`${PREFIX}/upload`, async (c) => {
     const sb = supabase();
     const storagePath = `weeks/${weekKey}/data.xlsx`;
 
-    // Upload file (upsert to overwrite existing)
     const arrayBuffer = await file.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
     const { error: uploadError } = await sb.storage
@@ -93,7 +88,6 @@ app.post(`${PREFIX}/upload`, async (c) => {
       return c.json({ error: `Upload failed: ${uploadError.message}` }, 500);
     }
 
-    // Save metadata to KV (prefixed for easy retrieval)
     await kv.set(`excel-week-${weekKey}`, {
       weekKey,
       title: title || "",
@@ -118,14 +112,11 @@ app.post(`${PREFIX}/upload`, async (c) => {
 });
 
 // ============================================================
-// GET /files - Get the 2 most recent files (by weekKey desc)
-// Returns: { thisWeek: {...}, lastWeek: {...} } with signed URLs
+// GET /files
 // ============================================================
 app.get(`${PREFIX}/files`, async (c) => {
   try {
     const sb = supabase();
-
-    // Fetch all excel-week-* entries from KV
     const allEntries = await kv.getByPrefix("excel-week-");
 
     if (!allEntries || allEntries.length === 0) {
@@ -135,21 +126,22 @@ app.get(`${PREFIX}/files`, async (c) => {
       });
     }
 
-    // Sort by weekKey descending (e.g. "2026-09" > "2026-08")
+    // deno-lint-ignore no-explicit-any
     const sorted = allEntries
-      .filter((e: any) => e && e.weekKey)
-      .sort((a: any, b: any) => b.weekKey.localeCompare(a.weekKey));
+      .filter((e: Record<string, unknown>) => e && e.weekKey)
+      .sort((a: Record<string, unknown>, b: Record<string, unknown>) =>
+        String(b.weekKey).localeCompare(String(a.weekKey))
+      );
 
+    // deno-lint-ignore no-explicit-any
     const result: Record<string, any> = {};
-
-    // Top 1 = thisWeek, Top 2 = lastWeek
     const slots = ["thisWeek", "lastWeek"];
     for (let i = 0; i < 2; i++) {
       const entry = sorted[i];
       if (entry) {
         const { data, error } = await sb.storage
           .from(BUCKET_NAME)
-          .createSignedUrl(entry.storagePath, 3600);
+          .createSignedUrl(String(entry.storagePath), 3600);
 
         if (error) {
           console.log(`Signed URL error for ${entry.weekKey}:`, error);
@@ -178,7 +170,7 @@ app.get(`${PREFIX}/files`, async (c) => {
 });
 
 // ============================================================
-// DELETE /files/:weekKey - Delete a specific week's file
+// DELETE /files/:weekKey
 // ============================================================
 app.delete(`${PREFIX}/files/:weekKey`, async (c) => {
   try {
@@ -198,5 +190,178 @@ app.delete(`${PREFIX}/files/:weekKey`, async (c) => {
     return c.json({ error: `Server error during delete: ${e}` }, 500);
   }
 });
+
+// ============================================================
+// POST /shelf-info — 서가위치 조회 (kiosk proxy)
+// Body: { storeCode: string, isbns: string[], debug?: boolean }
+// ============================================================
+app.post(`${PREFIX}/shelf-info`, async (c) => {
+  try {
+    const body = await c.req.json();
+    const storeCode = String(body.storeCode || "");
+    const rawIsbns = body.isbns;
+    const debugMode = Boolean(body.debug);
+
+    if (!storeCode || !Array.isArray(rawIsbns) || rawIsbns.length === 0) {
+      return c.json({ error: "storeCode and isbns[] required" }, 400);
+    }
+
+    const isbns: string[] = rawIsbns.map(String).slice(0, 50);
+    const results: Record<string, unknown> = {};
+    const debugArr: unknown[] = [];
+
+    // 5개씩 병렬 처리
+    for (let i = 0; i < isbns.length; i += 5) {
+      const chunk = isbns.slice(i, i + 5);
+      const promises = chunk.map(async (isbn: string) => {
+        const clean = isbn.replace(/[-\s]/g, "");
+        const kioskUrl =
+          "https://kiosk.kyobobook.co.kr/bookInfoInk?site=" +
+          storeCode +
+          "&barcode=" +
+          clean +
+          "&ejkGb=KOR";
+        try {
+          const res = await fetch(kioskUrl, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+              "Accept": "text/html,*/*",
+              "Accept-Language": "ko-KR,ko;q=0.9",
+            },
+          });
+          const html = await res.text();
+          console.log("[shelf] " + clean + " status=" + String(res.status) + " len=" + String(html.length));
+          if (!res.ok) {
+            results[isbn] = null;
+            if (debugMode) {
+              debugArr.push({ isbn, status: res.status, size: html.length, snippet: html.slice(0, 300), parsed: 0 });
+            }
+            return;
+          }
+          const parsed = doParseShelf(html);
+          results[isbn] = parsed.length > 0 ? parsed : null;
+          if (debugMode) {
+            debugArr.push({ isbn, status: res.status, size: html.length, snippet: html.slice(0, 500), parsed: parsed.length });
+          }
+        } catch (fetchErr) {
+          console.log("[shelf] " + clean + " err: " + String(fetchErr));
+          results[isbn] = null;
+          if (debugMode) {
+            debugArr.push({ isbn, error: String(fetchErr) });
+          }
+        }
+      });
+      await Promise.all(promises);
+    }
+
+    if (debugMode) {
+      return c.json({ results, debug: debugArr });
+    }
+    return c.json({ results });
+  } catch (handlerErr) {
+    console.log("shelf-info error: " + String(handlerErr));
+    return c.json({ error: String(handlerErr) }, 500);
+  }
+});
+
+// ============================================================
+// GET /shelf-test — single ISBN diagnostic
+// ============================================================
+app.get(`${PREFIX}/shelf-test`, async (c) => {
+  const site = c.req.query("site") || "01";
+  const isbn = c.req.query("isbn") || "9788936434267";
+  const kioskUrl =
+    "https://kiosk.kyobobook.co.kr/bookInfoInk?site=" + site + "&barcode=" + isbn + "&ejkGb=KOR";
+  try {
+    const res = await fetch(kioskUrl, {
+      headers: { "User-Agent": "Mozilla/5.0", "Accept": "text/html,*/*", "Accept-Language": "ko-KR" },
+    });
+    const html = await res.text();
+    return c.json({
+      url: kioskUrl,
+      status: res.status,
+      htmlSize: html.length,
+      htmlSnippet: html.slice(0, 2000),
+      parsed: doParseShelf(html),
+    });
+  } catch (fetchErr) {
+    return c.json({ url: kioskUrl, error: String(fetchErr) }, 500);
+  }
+});
+
+// ============================================================
+// Shelf HTML parser (순수 함수, 외부 의존 없음)
+// ============================================================
+function doParseShelf(html: string): Array<{ location: string; category: string }> {
+  const out: Array<{ location: string; category: string }> = [];
+  try {
+    // strip script/style
+    let t = html;
+    t = t.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
+    t = t.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
+
+    // convert tags to newlines, strip remaining tags
+    t = t.replace(/<br\s*\/?>/gi, "\n");
+    t = t.replace(/<\/(?:div|p|td|th|tr|li|dt|dd|span|strong|b|em|h\d)>/gi, "\n");
+    t = t.replace(/<[^>]+>/g, " ");
+    t = t.replace(/&nbsp;/g, " ");
+    t = t.replace(/&amp;/g, "&");
+    t = t.replace(/&lt;/g, "<");
+    t = t.replace(/&gt;/g, ">");
+
+    const lines: string[] = [];
+    const rawLines = t.split("\n");
+    for (let li = 0; li < rawLines.length; li++) {
+      const trimmed = rawLines[li].replace(/\s+/g, " ").trim();
+      if (trimmed.length > 0) {
+        lines.push(trimmed);
+      }
+    }
+
+    // Strategy 1: [bracket] patterns
+    for (let i = 0; i < lines.length; i++) {
+      const m = lines[i].match(/(\[[^\]]{2,}\])\s*(.*)/);
+      if (!m) continue;
+      if (/^\[(닫기|확인|검색|취소|이전|다음|홈|메뉴)\]$/.test(m[1])) continue;
+      const loc = m[2].trim() ? m[1] + " " + m[2].trim() : m[1];
+      let cat = "";
+      for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+        const nl = lines[j].trim();
+        if (nl.length < 2) continue;
+        if (/\[[^\]]{2,}\]/.test(nl)) break;
+        if (/[가-힣]/.test(nl) && nl.length > 3) {
+          cat = nl;
+          break;
+        }
+      }
+      out.push({ location: loc, category: cat });
+      if (out.length >= 2) break;
+    }
+
+    // Strategy 2: keyword fallback
+    if (out.length === 0) {
+      let ki = -1;
+      for (let s = 0; s < lines.length; s++) {
+        if (/서가|진열|위치|매대|평대|꽂이/.test(lines[s])) {
+          ki = s;
+          break;
+        }
+      }
+      if (ki >= 0) {
+        let cat = "";
+        for (let j = ki + 1; j < Math.min(ki + 3, lines.length); j++) {
+          if (/[가-힣]/.test(lines[j]) && lines[j].trim().length > 3) {
+            cat = lines[j].trim();
+            break;
+          }
+        }
+        out.push({ location: lines[ki].trim(), category: cat });
+      }
+    }
+  } catch (parseErr) {
+    console.log("doParseShelf error: " + String(parseErr));
+  }
+  return out;
+}
 
 Deno.serve(app.fetch);

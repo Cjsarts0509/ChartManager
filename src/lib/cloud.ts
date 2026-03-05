@@ -335,6 +335,273 @@ export function getDefaultParts(): PartConfig[] {
 }
 
 // ============================
+// Shelf Location Info (서가위치 조회)
+// CORS 프록시 경유 → kiosk.kyobobook.co.kr (Edge Function 배포 불가 대응)
+// ============================
+
+export interface ShelfLocation {
+  location: string;  // e.g., "[J관 2] 평대"
+  category: string;  // e.g., "한국소설 베스트 > (1) 베스트하단 MD"
+}
+
+export interface ShelfResult {
+  stock: string | null;    // e.g., "246부"
+  locations: ShelfLocation[];
+}
+
+export type ShelfInfoMap = Record<string, ShelfResult | null>;
+
+// 메모리 캐시: 세션 동안 유지 (같은 영업점+ISBN 재조회 방지)
+const shelfCache = new Map<string, ShelfResult | null>();
+
+// 중복 호출 방지 — ISBN별 개별 추적
+const shelfFetchingIsbns = new Set<string>();
+
+/** CORS 프록시를 통해 단일 URL fetch — codetabs 20초 1차 → 10초 2차 → 10초 3차 */
+async function fetchViaProxy(targetUrl: string): Promise<string | null> {
+  const attempts: { name: string; url: string; timeout: number }[] = [
+    {
+      name: 'codetabs (1차)',
+      url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
+      timeout: 20000,
+    },
+    {
+      name: 'codetabs (2차 재시도)',
+      url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
+      timeout: 10000,
+    },
+    {
+      name: 'codetabs (3차 재시도)',
+      url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
+      timeout: 10000,
+    },
+  ];
+
+  for (const attempt of attempts) {
+    try {
+      console.log(`[shelf]   → ${attempt.name} 시도 중... (timeout ${attempt.timeout/1000}s)`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), attempt.timeout);
+      const res = await fetch(attempt.url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      console.log(`[shelf]   → ${attempt.name} 응답: ${res.status} ${res.statusText}`);
+      if (!res.ok) continue;
+
+      const text = await res.text();
+      if (text && text.length > 100) {
+        console.log(`[shelf]   → ${attempt.name} 성공: ${text.length}자`);
+        return text;
+      }
+      console.log(`[shelf]   → ${attempt.name} 응답 너무 짧음: ${text.length}자`);
+    } catch (err: any) {
+      const reason = err?.name === 'AbortError' ? `타임아웃(${attempt.timeout/1000}초)` : (err?.message || String(err));
+      console.warn(`[shelf]   → ${attempt.name} 실패: ${reason}`);
+    }
+  }
+  console.warn('[shelf]   → codetabs 3회 시도 모두 실패');
+  return null;
+}
+
+/**
+ * 키오스크 HTML에서 서가 정보 파싱
+ * 
+ * 실제 DOM 구조 (DevTools에서 확인):
+ *   div.p_stock
+ *     └ div
+ *       └ div
+ *         └ dt
+ *           ├ <strong> "[" "J관" "2" "]" </strong>
+ *           ├ "평대"
+ *           ├ <br>
+ *           └ <span> "한국소설 베스트" " > (1) 베스트하단 MD" </span>
+ *         └ dt  (2번째 서가가 있는 경우)
+ *           ├ <strong> "[" "J관" "2" "]" </strong>
+ *           ├ "평대"
+ *           ├ <br>
+ *           └ <span> "한국소설 베스트" </span>
+ */
+function parseShelfHtml(html: string): ShelfResult {
+  const out: ShelfLocation[] = [];
+  let stock: string | null = null;
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    // 1차: div.p_stock 내 dt 요소들로 서가 정보 추출
+    const stockDiv = doc.querySelector('.p_stock');
+    if (stockDiv) {
+      const dtElements = stockDiv.querySelectorAll('dt');
+      console.log(`[shelf] p_stock 내 dt 요소: ${dtElements.length}개`);
+
+      dtElements.forEach((dt, i) => {
+        if (out.length >= 2) return; // 최대 2개
+
+        // <strong> → "[J관 2]" 같은 위치 코드
+        const strong = dt.querySelector('strong');
+        const bracket = strong ? (strong.textContent || '').replace(/\s+/g, ' ').trim() : '';
+
+        // <span> → "한국소설 베스트" " > (1) 베스트하단 MD"
+        const span = dt.querySelector('span');
+        const category = span ? (span.textContent || '').replace(/\s+/g, ' ').trim() : '';
+
+        // <strong>과 <br> 사이의 텍스트 → "평대"
+        // dt의 직접 텍스트 노드에서 strong/span/br 제외한 부분
+        let shelfType = '';
+        dt.childNodes.forEach(node => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            const t = (node.textContent || '').trim();
+            if (t && t !== bracket && t !== category) {
+              shelfType += (shelfType ? ' ' : '') + t;
+            }
+          }
+        });
+
+        if (!bracket && !shelfType && !category) return; // 빈 dt 스킵
+
+        const location = [bracket, shelfType].filter(Boolean).join(' ').trim();
+        console.log(`[shelf] dt[${i}]: location="${location}", category="${category}"`);
+        out.push({ location, category });
+      });
+
+      // 재고 정보 추출: div.p_stock > div > strong 에 "재고: 246부" 형태
+      // dt 내부의 strong(서가 bracket)이 아닌, dt 외부 strong에서 "재고" 키워드 탐색
+      const allStrongs = stockDiv.querySelectorAll('strong');
+      allStrongs.forEach((s) => {
+        if (stock) return;
+        const txt = (s.textContent || '').replace(/\s+/g, ' ').trim();
+        const m = txt.match(/재고\s*[:\s]\s*(\d[\d,]*)\s*부/);
+        if (m) {
+          stock = m[1].replace(/,/g, '');
+          console.log(`[shelf] 재고 발견: "${stock}부" (원문: "${txt}")`);
+        }
+      });
+      // 폴백: p_stock 전체 텍트에서 재고 패턴 탐색
+      if (!stock) {
+        const fullText = (stockDiv.textContent || '').replace(/\s+/g, ' ').trim();
+        const fm = fullText.match(/재고\s*[:\s]\s*(\d[\d,]*)\s*부/);
+        if (fm) {
+          stock = fm[1].replace(/,/g, '');
+          console.log(`[shelf] 재고 폴백: "${stock}부"`);
+        }
+      }
+    }
+
+    // 2차 폴백: p_stock이 없으면 전체 텍스트에서 "도서위치:" 키워드 탐색
+    if (out.length === 0) {
+      doc.querySelectorAll('script, style, link, meta, noscript').forEach(el => el.remove());
+      const text = (doc.body?.textContent || '').replace(/\s+/g, ' ').trim();
+      const marker = '도서위치:';
+      const idx = text.indexOf(marker);
+      if (idx >= 0) {
+        const afterMarker = text.substring(idx + marker.length).trim();
+        console.log('[shelf] 폴백 - 도서위치 원문:', afterMarker.slice(0, 120));
+        if (!/^ISBN\s*\d/.test(afterMarker)) {
+          // [X관 N] 패턴 탐색
+          const bracketRegex = /\[([^\]]+)\]\s*/g;
+          let m;
+          while ((m = bracketRegex.exec(afterMarker)) !== null && out.length < 2) {
+            const b = m[1].trim();
+            if (/^(닫기|확인|검색|취소|이전|다음|홈|메뉴|로그인)$/.test(b)) continue;
+            const restStart = m.index + m[0].length;
+            const nextB = afterMarker.indexOf('[', restStart);
+            const restEnd = nextB > 0 ? nextB : Math.min(restStart + 80, afterMarker.length);
+            const rest = afterMarker.substring(restStart, restEnd).trim();
+            out.push({ location: `[${b}] ${rest.split('>')[0]?.trim() || ''}`.trim(), category: rest });
+          }
+          if (out.length === 0 && afterMarker.length > 2) {
+            out.push({ location: afterMarker.slice(0, 60), category: '' });
+          }
+        }
+      } else {
+        console.log('[shelf] "도서위치:" 키워드 없음, p_stock도 없음');
+      }
+    }
+
+    console.log('[shelf] 최종 파싱 결과:', out);
+  } catch (e) {
+    console.warn('[shelf] parseShelfHtml error:', e);
+  }
+  return { stock, locations: out };
+}
+
+/**
+ * 서가위치 정보 조회 (CORS 프록시 경유, 브라우저에서 직접 파싱)
+ */
+export async function fetchShelfInfo(
+  storeCode: string,
+  isbns: string[]
+): Promise<ShelfInfoMap> {
+  const result: ShelfInfoMap = {};
+  const uncached: string[] = [];
+
+  for (const isbn of isbns) {
+    const cacheKey = `${storeCode}:${isbn}`;
+    if (shelfCache.has(cacheKey)) {
+      result[isbn] = shelfCache.get(cacheKey)!;
+    } else {
+      uncached.push(isbn);
+    }
+  }
+
+  if (uncached.length === 0) return result;
+
+  // 중복 호출 방지 — ISBN별 개별 추적
+  const alreadyFetching = uncached.filter(isbn => shelfFetchingIsbns.has(isbn));
+  if (alreadyFetching.length > 0) {
+    console.log('[shelf] 이미 조회 중 → 스킵:', alreadyFetching);
+    return result;
+  }
+  uncached.forEach(isbn => shelfFetchingIsbns.add(isbn));
+
+  console.log(`[shelf] 서가 조회 시작: storeCode=${storeCode}, ${uncached.length}건`);
+
+  try {
+    // 4씩 병렬 처리
+    for (let i = 0; i < uncached.length; i += 4) {
+      const chunk = uncached.slice(i, i + 4);
+      console.log(`[shelf] 청크 ${Math.floor(i/4)+1}: ${chunk.map(x => x.replace(/[-\s]/g,'')).join(', ')}`);
+      const results = await Promise.allSettled(chunk.map(async (isbn) => {
+        const clean = isbn.replace(/[-\s]/g, '');
+        const kioskUrl = `https://kiosk.kyobobook.co.kr/bookInfoInk?site=${storeCode}&barcode=${clean}&ejkGb=KOR`;
+        console.log(`[shelf] ${clean}: fetch 시작`);
+        try {
+          const html = await fetchViaProxy(kioskUrl);
+          if (!html) {
+            console.log(`[shelf] ${clean}: HTML 없음 (모든 프록시 실패)`);
+            result[isbn] = null;
+            shelfCache.set(`${storeCode}:${isbn}`, null);
+            return;
+          }
+          console.log(`[shelf] ${clean}: HTML ${html.length}자 수신, 파싱 시작`);
+          const parsed = parseShelfHtml(html);
+          const val = parsed.locations.length > 0 ? parsed : null;
+          result[isbn] = val;
+          shelfCache.set(`${storeCode}:${isbn}`, val);
+          console.log(`[shelf] ${clean}: 완료 → ${val ? val.locations.map(v=>v.location).join(' / ') : '서가 없음'}`);
+        } catch (e) {
+          console.error(`[shelf] ${clean}: 예외`, e);
+          result[isbn] = null;
+          shelfCache.set(`${storeCode}:${isbn}`, null);
+        } finally {
+          shelfFetchingIsbns.delete(isbn);
+        }
+      }));
+      console.log(`[shelf] 청크 ${Math.floor(i/4)+1} 완료:`, results.map(r => r.status));
+    }
+  } finally {
+    // 중복 호출 방지 플래그 해제
+    uncached.forEach(isbn => shelfFetchingIsbns.delete(isbn));
+  }
+
+  return result;
+}
+
+/** 영업점 변경 시 서가 캐시 초기화 */
+export function clearShelfCache(): void {
+  shelfCache.clear();
+}
+
+// ============================
 // Audit Log (작업 기록)
 // ============================
 

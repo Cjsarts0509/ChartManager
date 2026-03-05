@@ -4,7 +4,8 @@ import { getComparison } from '../../lib/compare';
 import { CATEGORIES, STORES, Store } from '../../lib/constants';
 import { fetchStorePartConfig, getDefaultParts, PartConfig } from '../../lib/cloud';
 import { BookTable } from './BookTable';
-import { ChevronDown, FileSpreadsheet, MapPin, X, Search, RefreshCw, Cloud, Layers } from 'lucide-react';
+import { BookTableRef } from './BookTable';
+import { ChevronDown, FileSpreadsheet, MapPin, X, Search, RefreshCw, Cloud, Layers, BookOpen } from 'lucide-react';
 import { CloudFilesResponse } from '../../lib/cloud';
 
 interface MobileViewProps {
@@ -38,19 +39,25 @@ export const MobileView: React.FC<MobileViewProps> = ({
   const [partsLoading, setPartsLoading] = useState(false);
 
   const storePanelRef = useRef<HTMLDivElement>(null);
+  const partPanelRef = useRef<HTMLDivElement>(null);
+  const bookTableRef = useRef<BookTableRef>(null);
+  const [showPartPanel, setShowPartPanel] = useState(false);
 
   // 영업점 패널 외부 클릭 시 닫기
   useEffect(() => {
-    if (!showStorePanel) return;
+    if (!showStorePanel && !showPartPanel) return;
     const handler = (e: MouseEvent) => {
-      if (storePanelRef.current && !storePanelRef.current.contains(e.target as Node)) {
+      if (showStorePanel && storePanelRef.current && !storePanelRef.current.contains(e.target as Node)) {
         setShowStorePanel(false);
         setStoreSearch("");
+      }
+      if (showPartPanel && partPanelRef.current && !partPanelRef.current.contains(e.target as Node)) {
+        setShowPartPanel(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [showStorePanel]);
+  }, [showStorePanel, showPartPanel]);
 
   // 영업점 변경 시 파트 설정 불러오기
   useEffect(() => {
@@ -88,28 +95,22 @@ export const MobileView: React.FC<MobileViewProps> = ({
 
   const hasData = thisWeekBooks.length > 0 || lastWeekBooks.length > 0;
 
-  // 검색 필터링된 영업점
   const filteredStores = useMemo(() => {
     if (!storeSearch.trim()) return STORES;
     const q = storeSearch.trim().toLowerCase();
     return STORES.filter(s => s.name.toLowerCase().includes(q) || s.code.includes(q));
   }, [storeSearch]);
 
-  // 파트에 속한 조코드만 표시 (파트 선택 시)
   const availableCategories = useMemo(() => {
-    if (selectedPart) {
-      return selectedPart.categories.map(c => c.code);
-    }
+    if (selectedPart) return selectedPart.categories.map(c => c.code);
     return CATEGORIES;
   }, [selectedPart]);
 
-  // 조코드별 순위 맵 (파트에서 설정한 rank)
   const categoryRanks = useMemo(() => {
     if (!selectedPart) return undefined;
     return Object.fromEntries(selectedPart.categories.map(c => [c.code, c.rank]));
   }, [selectedPart]);
 
-  // 조코드 변경 시 해당 파트의 rank로 limit 자동 설정
   const handleGroupCodeChange = (code: string) => {
     setGroupCode(code);
     if (categoryRanks && categoryRanks[code]) {
@@ -117,12 +118,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
     }
   };
 
-  // 이번주 리스트
   const currentList = useMemo(() => {
     return getComparison(thisWeekBooks, lastWeekBooks, groupCode, limit);
   }, [thisWeekBooks, lastWeekBooks, groupCode, limit]);
 
-  // 지난주 리스트 (OUT 판별)
   const pastList = useMemo(() => {
     const prevGroupSlice = lastWeekBooks
       .filter(b => b.groupCode === groupCode)
@@ -155,33 +154,86 @@ export const MobileView: React.FC<MobileViewProps> = ({
     <div className="min-h-screen bg-gray-100 flex flex-col font-sans">
       {/* Sticky Header */}
       <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-        {/* Row 1: 영업점 선택 */}
-        <div className="flex items-center gap-2 px-3 pt-2 pb-1 relative" ref={storePanelRef}>
-          <button
-            onClick={() => setShowStorePanel(prev => !prev)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all flex-1 ${
-              selectedStore
-                ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
-                : 'bg-gray-100 border border-gray-300 text-gray-600'
-            }`}
-          >
-            <MapPin size={13} className={selectedStore ? 'text-emerald-600' : 'text-gray-400'} />
-            {selectedStore ? (
-              <span className="font-semibold flex-1 text-left">
-                <span className="text-emerald-500 font-mono mr-1.5">{selectedStore.code}</span>
-                {selectedStore.name}
-              </span>
-            ) : (
-              <span className="flex-1 text-left text-gray-400">영업점을 선택하세요</span>
-            )}
-            <ChevronDown size={12} className={`transition-transform ${showStorePanel ? 'rotate-180' : ''}`} />
-          </button>
+        {/* 2행 2열 그리드: 영업점|클라우드 / 파트|서가 — 열 폭 통일 */}
+        <div className="grid px-3 pt-2 pb-1 gap-x-2 gap-y-1" style={{ gridTemplateColumns: '1fr auto' }}>
+          {/* Row 1 Left: 영업점 드롭다운 */}
+          <div className="relative min-w-0" ref={storePanelRef}>
+            <button
+              onClick={() => { setShowStorePanel(prev => !prev); setShowPartPanel(false); }}
+              className={`w-full flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                selectedStore
+                  ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                  : 'bg-gray-100 border border-gray-300 text-gray-600'
+              }`}
+            >
+              <MapPin size={13} className={selectedStore ? 'text-emerald-600' : 'text-gray-400'} />
+              {selectedStore ? (
+                <span className="font-semibold flex-1 text-left truncate">
+                  <span className="text-emerald-500 font-mono mr-1.5">{selectedStore.code}</span>
+                  {selectedStore.name}
+                </span>
+              ) : (
+                <span className="flex-1 text-left text-gray-400">영업점을 선택하세요</span>
+              )}
+              <ChevronDown size={12} className={`transition-transform shrink-0 ${showStorePanel ? 'rotate-180' : ''}`} />
+            </button>
 
-          {/* Cloud Refresh Button */}
+            {/* 영업점 드롭다운 패널 */}
+            {showStorePanel && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-200 z-[60] overflow-hidden" style={{ width: 'calc(100vw - 24px)', maxWidth: 'calc(100vw - 24px)' }}>
+                <div className="p-2 border-b border-gray-100">
+                  <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                    <Search size={14} className="text-gray-400 shrink-0" />
+                    <input
+                      type="text"
+                      value={storeSearch}
+                      onChange={(e) => setStoreSearch(e.target.value)}
+                      placeholder="코드 또는 영업점명 검색"
+                      className="flex-1 bg-transparent text-sm outline-none placeholder-gray-400"
+                      autoFocus
+                    />
+                    {storeSearch && (
+                      <button onClick={() => setStoreSearch("")} className="p-0.5">
+                        <X size={12} className="text-gray-400" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="max-h-[50vh] overflow-y-auto">
+                  {filteredStores.length === 0 ? (
+                    <div className="py-6 text-center text-gray-400 text-xs">검색 결과가 없습니다</div>
+                  ) : (
+                    filteredStores.map(store => {
+                      const isSelected = selectedStore?.code === store.code;
+                      return (
+                        <button
+                          key={store.code}
+                          onClick={() => handleSelectStore(store)}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors active:bg-gray-100 ${
+                            isSelected ? 'bg-emerald-50' : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <span className={`font-mono text-xs w-8 shrink-0 ${isSelected ? 'text-emerald-600 font-bold' : 'text-gray-400'}`}>
+                            {store.code}
+                          </span>
+                          <span className={`text-sm flex-1 ${isSelected ? 'text-emerald-800 font-semibold' : 'text-gray-700'}`}>
+                            {store.name}
+                          </span>
+                          {isSelected && <div className="w-2 h-2 bg-emerald-500 rounded-full shrink-0" />}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Row 1 Right: 클라우드 버튼 */}
           <button
             onClick={onRefreshCloud}
             disabled={cloudLoading}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs border transition-colors shrink-0 ${
+            className={`flex items-center justify-center gap-1 w-[52px] py-1.5 rounded-lg text-xs border transition-colors ${
               cloudLoading
                 ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
                 : 'bg-gray-50 border-gray-300 text-gray-600 active:bg-emerald-50'
@@ -191,97 +243,100 @@ export const MobileView: React.FC<MobileViewProps> = ({
             <Cloud size={13} className={cloudLoading ? 'text-emerald-500' : 'text-gray-400'} />
           </button>
 
-          {/* Store Dropdown Panel */}
-          {showStorePanel && (
-            <div className="absolute left-3 right-3 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-200 z-[60] overflow-hidden">
-              {/* 검색 */}
-              <div className="p-2 border-b border-gray-100">
-                <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
-                  <Search size={14} className="text-gray-400 shrink-0" />
-                  <input
-                    type="text"
-                    value={storeSearch}
-                    onChange={(e) => setStoreSearch(e.target.value)}
-                    placeholder="코드 또는 영업점명 검색"
-                    className="flex-1 bg-transparent text-sm outline-none placeholder-gray-400"
-                    autoFocus
-                  />
-                  {storeSearch && (
-                    <button onClick={() => setStoreSearch("")} className="p-0.5">
-                      <X size={12} className="text-gray-400" />
-                    </button>
-                  )}
-                </div>
-              </div>
+          {/* Row 2 Left: 파트 드롭다운 */}
+          <div className="relative min-w-0" ref={partPanelRef}>
+            <button
+              onClick={() => {
+                if (!selectedStore || partsLoading || storeParts.length === 0) return;
+                setShowPartPanel(prev => !prev);
+                setShowStorePanel(false);
+              }}
+              className={`w-full flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                selectedPart
+                  ? 'bg-blue-50 border border-blue-200 text-blue-800'
+                  : selectedStore && storeParts.length > 0
+                    ? 'bg-gray-100 border border-gray-300 text-gray-600'
+                    : 'bg-gray-50 border border-gray-200 text-gray-400 cursor-default'
+              }`}
+            >
+              <Layers size={13} className={selectedPart ? 'text-blue-600' : 'text-gray-400'} />
+              {!selectedStore ? (
+                <span className="flex-1 text-left text-gray-400 truncate">영업점을 먼저 선택</span>
+              ) : partsLoading ? (
+                <span className="flex-1 text-left text-gray-400 truncate">불러오는 중...</span>
+              ) : storeParts.length === 0 ? (
+                <span className="flex-1 text-left text-gray-400 truncate">설정된 파트 없음</span>
+              ) : selectedPart ? (
+                <span className="font-semibold flex-1 text-left truncate">
+                  {selectedPart.name}
+                  <span className="text-blue-400 ml-1.5 text-[10px]">{selectedPart.categories.length}개 조코드</span>
+                </span>
+              ) : (
+                <span className="flex-1 text-left text-gray-400 truncate">파트를 선택하세요</span>
+              )}
+              {selectedPart && (
+                <span
+                  onClick={(e) => { e.stopPropagation(); setSelectedPartId(null); setShowPartPanel(false); }}
+                  className="p-0.5 rounded-full active:bg-blue-200 transition-colors"
+                >
+                  <X size={12} className="text-blue-600" />
+                </span>
+              )}
+              {selectedStore && storeParts.length > 0 && (
+                <ChevronDown size={12} className={`transition-transform shrink-0 ${showPartPanel ? 'rotate-180' : ''}`} />
+              )}
+            </button>
 
-              {/* 목록 */}
-              <div className="max-h-[50vh] overflow-y-auto">
-                {filteredStores.length === 0 ? (
-                  <div className="py-6 text-center text-gray-400 text-xs">검색 결과가 없습니다</div>
-                ) : (
-                  filteredStores.map(store => {
-                    const isSelected = selectedStore?.code === store.code;
+            {/* 파트 드롭다운 패널 */}
+            {showPartPanel && storeParts.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-200 z-[60] overflow-hidden" style={{ width: 'calc(100vw - 24px)', maxWidth: 'calc(100vw - 24px)' }}>
+                <div className="max-h-[300px] overflow-y-auto">
+                  {storeParts.map((part, idx) => {
+                    const isSelected = selectedPartId === part.id;
                     return (
                       <button
-                        key={store.code}
-                        onClick={() => handleSelectStore(store)}
+                        key={part.id}
+                        onClick={() => { setSelectedPartId(part.id); setShowPartPanel(false); }}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors active:bg-gray-100 ${
-                          isSelected ? 'bg-emerald-50' : 'hover:bg-gray-50'
+                          isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
                         }`}
                       >
-                        <span className={`font-mono text-xs w-8 shrink-0 ${isSelected ? 'text-emerald-600 font-bold' : 'text-gray-400'}`}>
-                          {store.code}
+                        <Layers size={12} className={isSelected ? 'text-blue-500' : 'text-gray-300'} />
+                        <span className={`font-mono text-xs w-7 shrink-0 ${isSelected ? 'text-blue-500' : 'text-gray-400'}`}>
+                          {String(idx + 1).padStart(3, '0')}
                         </span>
-                        <span className={`text-sm flex-1 ${isSelected ? 'text-emerald-800 font-semibold' : 'text-gray-700'}`}>
-                          {store.name}
+                        <span className={`text-sm flex-1 ${isSelected ? 'text-blue-800 font-semibold' : 'text-gray-700'}`}>
+                          {part.name}
                         </span>
-                        {isSelected && (
-                          <div className="w-2 h-2 bg-emerald-500 rounded-full shrink-0" />
-                        )}
+                        <span className={`text-[10px] shrink-0 ${isSelected ? 'text-blue-500' : 'text-gray-400'}`}>
+                          {part.categories.length}개
+                        </span>
+                        {isSelected && <div className="w-2 h-2 bg-blue-500 rounded-full shrink-0" />}
                       </button>
                     );
-                  })
-                )}
+                  })}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Row 2: 파트 선택 탭 (영업점 선택 시에만 표시) */}
-        {selectedStore && storeParts.length > 0 && (
-          <div className="px-3 py-1">
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
-              <Layers size={12} className="text-gray-400 shrink-0" />
-              {partsLoading ? (
-                <span className="text-xs text-gray-400 px-2">불러오는 중...</span>
-              ) : (
-                storeParts.map(part => {
-                  const isActive = selectedPartId === part.id;
-                  return (
-                    <button
-                      key={part.id}
-                      onClick={() => setSelectedPartId(part.id)}
-                      className={`px-2.5 py-1 rounded-full text-xs whitespace-nowrap transition-all ${
-                        isActive
-                          ? 'bg-emerald-600 text-white shadow-sm'
-                          : 'bg-gray-100 text-gray-600 active:bg-gray-200'
-                      }`}
-                    >
-                      {part.name}
-                      <span className={`ml-1 ${isActive ? 'text-emerald-200' : 'text-gray-400'}`}>
-                        {part.categories.length}
-                      </span>
-                    </button>
-                  );
-                })
-              )}
-            </div>
+            )}
           </div>
-        )}
+
+          {/* Row 2 Right: 서가 버튼 (항상 표시, 비활성화 가능) */}
+          <button
+            onClick={() => { if (selectedStore && hasData) bookTableRef.current?.fetchAllShelves(); }}
+            disabled={!selectedStore || !hasData}
+            className={`flex items-center justify-center gap-1 w-[52px] py-1.5 rounded-lg text-xs border transition-colors ${
+              selectedStore && hasData
+                ? 'bg-amber-50 border-amber-200 text-amber-700 active:bg-amber-100'
+                : 'bg-gray-50 border-gray-200 text-gray-300 cursor-default'
+            }`}
+          >
+            <BookOpen size={13} />
+            <span className="text-[10px] font-bold">서가</span>
+          </button>
+        </div>
 
         {/* Row 3: 조코드 + 순위상한 */}
         <div className="flex items-center gap-2 px-3 py-1.5">
-          {/* 조코드 드롭다운 */}
           <select
             value={groupCode}
             onChange={(e) => handleGroupCodeChange(e.target.value)}
@@ -291,8 +346,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
-
-          {/* 순위 상한 */}
           <div className="flex items-center gap-1 shrink-0">
             <span className="text-xs text-gray-500">Top</span>
             <input
@@ -310,7 +363,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
       {/* Content */}
       <div className="flex-1 overflow-auto">
         {cloudLoading && !hasData ? (
-          /* Loading State */
           <div className="flex flex-col items-center justify-center h-full px-6 py-20 text-center">
             <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mb-4">
               <RefreshCw size={28} className="text-emerald-500 animate-spin" />
@@ -319,7 +371,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
             <p className="text-gray-400 text-xs">최신 베스트셀러 데이터를 가져오고 있습니다</p>
           </div>
         ) : !hasData ? (
-          /* Empty State */
           <div className="flex flex-col items-center justify-center h-full px-6 py-20 text-center">
             <div className="w-16 h-16 bg-gray-200 rounded-2xl flex items-center justify-center mb-4">
               <FileSpreadsheet size={28} className="text-gray-400" />
@@ -335,9 +386,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
             </button>
           </div>
         ) : (
-          /* Table Content */
           <div className="px-3 py-3">
-            {/* This Week Table */}
+            {/* 이번주 — 서가 조회 가능 */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-3">
               <div className="text-center border-b-2 border-black py-2 bg-white">
                 <h3 className="text-sm font-bold text-gray-900">{title || '이번주 데이터 없음'}</h3>
@@ -349,15 +399,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 </p>
               </div>
               {currentList.length > 0 ? (
-                <BookTable books={currentList} storeCode={selectedStore?.code} storeName={selectedStore?.name} />
+                <BookTable ref={bookTableRef} books={currentList} storeCode={selectedStore?.code} storeName={selectedStore?.name} showShelfRow />
               ) : (
-                <div className="py-8 text-center text-gray-400 text-xs">
-                  해당 분야에 데이터가 없습니다
-                </div>
+                <div className="py-8 text-center text-gray-400 text-xs">해당 분야에 데이터가 없습니다</div>
               )}
             </div>
 
-            {/* Last Week Table */}
+            {/* 이전주 — 서가 없음 */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <div className="text-center border-b border-black py-2 bg-white">
                 <h3 className="text-sm font-bold text-gray-900">{lastWeekTitle || '지난주 데이터 없음'}</h3>
@@ -365,13 +413,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
               {pastList.length > 0 ? (
                 <BookTable books={pastList} storeCode={selectedStore?.code} storeName={selectedStore?.name} />
               ) : (
-                <div className="py-8 text-center text-gray-400 text-xs">
-                  해당 분야에 데이터가 없습니다
-                </div>
+                <div className="py-8 text-center text-gray-400 text-xs">해당 분야에 데이터가 없습니다</div>
               )}
             </div>
 
-            {/* Bottom Spacer */}
             <div className="h-6" />
           </div>
         )}

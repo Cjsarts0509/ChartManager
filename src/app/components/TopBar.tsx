@@ -50,30 +50,21 @@ export const TopBar: React.FC<TopBarProps> = ({
   const storePanelRef = useRef<HTMLDivElement>(null);
   const partPanelRef = useRef<HTMLDivElement>(null);
 
-  // 영업점 패널 외부 클릭 시 닫기
+  // 영업점/파트 패널 외부 클릭 시 닫기
   useEffect(() => {
-    if (!showStorePanel) return;
+    if (!showStorePanel && !showPartPanel) return;
     const handler = (e: MouseEvent) => {
-      if (storePanelRef.current && !storePanelRef.current.contains(e.target as Node)) {
+      if (showStorePanel && storePanelRef.current && !storePanelRef.current.contains(e.target as Node)) {
         setShowStorePanel(false);
         setStoreSearch("");
       }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showStorePanel]);
-
-  // 파트 패널 외부 클릭 시 닫기
-  useEffect(() => {
-    if (!showPartPanel) return;
-    const handler = (e: MouseEvent) => {
-      if (partPanelRef.current && !partPanelRef.current.contains(e.target as Node)) {
+      if (showPartPanel && partPanelRef.current && !partPanelRef.current.contains(e.target as Node)) {
         setShowPartPanel(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [showPartPanel]);
+  }, [showStorePanel, showPartPanel]);
 
   const filteredStores = useMemo(() => {
     if (!storeSearch.trim()) return STORES;
@@ -100,16 +91,6 @@ export const TopBar: React.FC<TopBarProps> = ({
   };
 
   const selectedPart = storeParts?.find(p => p.id === selectedPartId) || null;
-
-  const handleSelectPart = (part: PartConfig) => {
-    onSelectPart?.(part.id);
-    setShowPartPanel(false);
-  };
-
-  const handleClearPart = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onSelectPart?.(null);
-  };
 
   const BOARD_URL = "https://link.kyobobook.co.kr/po/board?MENUID=316&SYSID=14&_t=1772194249235";
 
@@ -348,12 +329,12 @@ export const TopBar: React.FC<TopBarProps> = ({
                 </span>
               ) : (
                 <span className="flex-1 text-left text-gray-400">
-                  {!selectedStore ? '영업점을 먼저 선택하세요' : hasParts ? '파를 선택하세요' : '설정된 파트가 없습니다'}
+                  {!selectedStore ? '영업점을 먼저 선택하세요' : hasParts ? '파트를 선택하세요' : '설정된 파트가 없습니다'}
                 </span>
               )}
               {selectedPart && (
                 <span
-                  onClick={handleClearPart}
+                  onClick={(e) => { e.stopPropagation(); onSelectPart?.(null); }}
                   className="p-0.5 rounded-full hover:bg-blue-200 transition-colors"
                 >
                   <X size={12} className="text-blue-600" />
@@ -373,7 +354,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                     return (
                       <button
                         key={part.id}
-                        onClick={() => handleSelectPart(part)}
+                        onClick={() => { onSelectPart?.(part.id); setShowPartPanel(false); }}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
                           isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
                         }`}
