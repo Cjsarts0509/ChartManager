@@ -455,6 +455,11 @@ function isIgnoredError(msg: string): boolean {
 }
 
 export function installGlobalErrorLogger(): void {
+  // ── DOM API 패치: 브라우저 확장/번역이 건드린 노드로 인한 React 크래시 근본 차단 ──
+  // React가 removeChild/insertBefore 호출 시 에러가 나면 조용히 무시하여
+  // 컴포넌트 트리 언마운트(흰 화면)를 방지
+  patchDomForExtensions();
+
   window.onerror = (message, source, lineno, colno, error) => {
     const msg = String(message);
     if (isIgnoredError(msg)) return;
@@ -466,5 +471,33 @@ export function installGlobalErrorLogger(): void {
     const msg = String(event.reason);
     if (isIgnoredError(msg)) return;
     writeErrorLog('global_unhandled_promise', event.reason);
+  };
+}
+
+/**
+ * DOM API 패치: 브라우저 확장/번역이 건드린 노드로 인한 React 크래시 근본 차단
+ * React가 removeChild/insertBefore 호출 시 에러가 나면 조용히 무시하여
+ * 컴포넌트 트리 언마운트(흰 화면)를 방지
+ */
+function patchDomForExtensions() {
+  const originalRemoveChild = Node.prototype.removeChild;
+  const originalInsertBefore = Node.prototype.insertBefore;
+
+  Node.prototype.removeChild = function(child: Node) {
+    try {
+      return originalRemoveChild.call(this, child);
+    } catch (e) {
+      console.warn('DOM API patch: removeChild failed, ignoring:', e);
+      return child;
+    }
+  };
+
+  Node.prototype.insertBefore = function(newNode: Node, referenceNode: Node | null) {
+    try {
+      return originalInsertBefore.call(this, newNode, referenceNode);
+    } catch (e) {
+      console.warn('DOM API patch: insertBefore failed, ignoring:', e);
+      return newNode;
+    }
   };
 }

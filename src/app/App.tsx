@@ -9,6 +9,7 @@ import { parseExcel, parseExcelFromBuffer, extractWeekKey } from '../lib/excel';
 import { fetchCloudFiles, uploadToCloud, downloadFileAsBuffer, computeFileHash, CloudFilesResponse, fetchStorePartConfig, PartConfig, getDefaultParts, installGlobalErrorLogger, writeErrorLog } from '../lib/cloud';
 import { Store } from '../lib/constants';
 import { Toaster, toast } from 'sonner';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Custom hook for responsive breakpoint
 function useIsMobile(breakpoint = 768) {
@@ -327,7 +328,7 @@ export default function App() {
 
   if (isMobile) {
     return (
-      <>
+      <ErrorBoundary>
         <Toaster position="top-center" />
         <MobileView
           thisWeekBooks={thisWeekData.books}
@@ -338,11 +339,12 @@ export default function App() {
           cloudInfo={cloudInfo}
           onRefreshCloud={() => loadFromCloud(false)}
         />
-      </>
+      </ErrorBoundary>
     );
   }
 
   return (
+    <ErrorBoundary>
     <div className="h-screen w-screen bg-[#e5e5e5] overflow-hidden flex flex-col font-sans main-desktop-wrapper">
       <Toaster position="top-center" />
       
@@ -545,5 +547,6 @@ export default function App() {
         />
       )}
     </div>
+    </ErrorBoundary>
   );
 }
