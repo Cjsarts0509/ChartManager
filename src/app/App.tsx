@@ -6,7 +6,7 @@ import { UploadConfirmDialog } from './components/UploadConfirmDialog';
 import { CategoryConfigDialog } from './components/CategoryConfigDialog';
 import { ProcessedData } from '../lib/types';
 import { parseExcel, parseExcelFromBuffer, extractWeekKey } from '../lib/excel';
-import { fetchCloudFiles, uploadToCloud, downloadFileAsBuffer, computeFileHash, CloudFilesResponse, fetchStorePartConfig, PartConfig, getDefaultParts, resetStorePartConfig, installGlobalErrorLogger, writeErrorLog } from '../lib/cloud';
+import { fetchCloudFiles, uploadToCloud, downloadFileAsBuffer, computeFileHash, CloudFilesResponse, fetchStorePartConfig, PartConfig, getDefaultParts, installGlobalErrorLogger, writeErrorLog } from '../lib/cloud';
 import { Store } from '../lib/constants';
 import { Toaster, toast } from 'sonner';
 
@@ -112,23 +112,6 @@ export default function App() {
   }, []);
 
   const isMobile = useIsMobile();
-
-  // 합정점(049) 파트 설정 초기화 (1회성)
-  useEffect(() => {
-    const RESET_KEY = 'hapjeong_part_reset_done_v1';
-    if (!localStorage.getItem(RESET_KEY)) {
-      resetStorePartConfig('049').then(() => {
-        localStorage.setItem(RESET_KEY, 'true');
-        console.log('합정점(049) 파트 설정 기본값으로 초기화 완료');
-        // 현재 합정점이 선택되어 있다면 즉시 반영
-        if (selectedStore?.code === '049') {
-          const defaults = getDefaultParts();
-          setStoreParts(defaults);
-          setSelectedPartId(defaults[0].id);
-        }
-      }).catch(e => console.warn('합정점 초기화 실패:', e));
-    }
-  }, []);
 
   // ============================
   // Cloud: Fetch & Download (자동 정렬)

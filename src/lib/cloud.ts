@@ -334,14 +334,6 @@ export function getDefaultParts(): PartConfig[] {
   }];
 }
 
-/**
- * 특정 영업점의 파트 설정을 기본값으로 초기화 (DB + localStorage)
- */
-export async function resetStorePartConfig(storeCode: string): Promise<void> {
-  const defaultParts = getDefaultParts();
-  await saveStorePartConfig(storeCode, defaultParts);
-}
-
 // ============================
 // Audit Log (작업 기록)
 // ============================
