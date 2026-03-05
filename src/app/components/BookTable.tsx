@@ -149,7 +149,7 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
   ) => {
     if (isLoading) {
       return (
-        <div className={clsx("flex items-center justify-center h-full gap-1", isHighlight ? "text-white/60" : "text-amber-400")}>
+        <div className={clsx("flex items-center justify-center h-full gap-1", isHighlight ? "text-white/60" : "text-gray-400")}>
           <Loader2 size={10} className="animate-spin" />
           <span className="text-[8px]">조회중</span>
         </div>
@@ -163,10 +163,10 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
 
     return (
       <div className={clsx(
-        "rounded px-1 py-0.5 text-[8px] leading-tight border w-full",
+        "rounded-lg px-1.5 py-1 text-[8px] leading-tight border w-full",
         isHighlight
-          ? "bg-white/90 border-white text-gray-900"
-          : "bg-amber-100 border-amber-300 text-gray-900"
+          ? "bg-[#c8d8eb] border-[#a3bcd8] text-[#1a3a5c]"
+          : "bg-white border-[#d5cfc6] text-[#4a3f35]"
       )}>
         {/* 1행: location */}
         <div className="font-bold whitespace-normal break-words">{loc.location}</div>
@@ -174,7 +174,7 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
         {loc.category && (
           <div className={clsx(
             "whitespace-normal break-words mt-px",
-            isHighlight ? "text-gray-600" : "text-amber-800"
+            isHighlight ? "text-[#3a6494]" : "text-[#8a7e72]"
           )}>
             {loc.category}
           </div>
@@ -195,7 +195,7 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
             >
               <div className="border-r border-gray-300">순위</div>
               <div className="border-r border-gray-300">ISBN</div>
-              <div>도서명 <span className="text-[8px] font-normal text-gray-400">탭→서가</span></div>
+              <div>도서명</div>
             </div>
           </div>
 
@@ -266,8 +266,8 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
                         <span className={clsx(
                           "shrink-0 ml-1 text-[7px] px-1 py-px rounded font-bold whitespace-nowrap",
                           isHighlight
-                            ? "bg-white/20 text-white"
-                            : "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                            ? "bg-[#0000CD]/25 text-[#FFF79B] border border-[#FFF79B]/30"
+                            : "bg-[#f5f0e8] text-[#7a6e5f] border border-[#d5cfc6]"
                         )}>
                           {bookShelf.stock}부
                         </span>
@@ -277,21 +277,32 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
                 </div>
 
                 {/* 2행: 서가①카드 | 서가②카드 (클릭해서 펼친 경우만) */}
-                {isExpanded && (
+                {isExpanded && (() => {
+                  const shelfLoaded = !isThisLoading && bookShelf !== undefined;
+                  return (
                   <div className={clsx(
                     "grid border-b-2",
-                    isHighlight ? "border-white/50 bg-black/5" : "border-amber-400 bg-amber-50"
+                    shelfLoaded
+                      ? isHighlight
+                        ? "border-[#7eaad4] bg-[#3b6fa0]"
+                        : "border-[#d5cfc6] bg-[#f5f0e8]"
+                      : "border-gray-200 bg-white"
                   )}
                     style={{ gridTemplateColumns: '1fr 1fr', minHeight: '28px' }}
                   >
-                    <div className={clsx("px-1 py-1 flex items-start border-r", isHighlight ? "border-white/30" : "border-amber-300")}>
+                    <div className={clsx("px-1 py-1 flex items-start border-r",
+                      shelfLoaded
+                        ? isHighlight ? "border-[#7eaad4]/50" : "border-[#d5cfc6]"
+                        : "border-gray-200"
+                    )}>
                       {renderShelfCard(bookShelf, 0, isHighlight, isThisLoading)}
                     </div>
                     <div className="px-1 py-1 flex items-start">
                       {renderShelfCard(bookShelf, 1, isHighlight, isThisLoading)}
                     </div>
                   </div>
-                )}
+                  );
+                })()}
               </div>
             );
           })}
