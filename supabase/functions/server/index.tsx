@@ -192,8 +192,48 @@ app.delete(`${PREFIX}/files/:weekKey`, async (c) => {
 });
 
 // ============================================================
-// POST /shelf-info — 서가위치 조회 (kiosk proxy)
-// Body: { storeCode: string, isbns: string[], debug?: boolean }
+// GET /proxy-shelf — ✨신규 추가: 프론트엔드를 위한 범용 CORS 프록시✨
+// 목적지 URL의 HTML을 긁어다 프론트엔드에 텍스트로 그대로 전달합니다.
+// ============================================================
+app.get(`${PREFIX}/proxy-shelf`, async (c) => {
+  try {
+    const targetUrl = c.req.query("url");
+    if (!targetUrl) {
+      return c.text("Missing url parameter", 400);
+    }
+
+    console.log(`[proxy-shelf] Fetching target: ${targetUrl}`);
+    
+    // 교보문고 서버가 봇으로 인식하지 않도록 일반 브라우저와 유사한 헤더를 추가합니다.
+    const res = await fetch(targetUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+      },
+    });
+
+    if (!res.ok) {
+      console.warn(`[proxy-shelf] Fetch error: ${res.status} ${res.statusText}`);
+      return c.text(`Proxy fetch failed with status: ${res.status}`, res.status);
+    }
+
+    // HTML 텍스트를 그대로 프론트엔드에 응답
+    const html = await res.text();
+    return new Response(html, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+      },
+    });
+  } catch (e) {
+    console.error(`[proxy-shelf] Server Error: ${e}`);
+    return c.text(`Internal Server Error: ${e}`, 500);
+  }
+});
+
+// ============================================================
+// POST /shelf-info — (기존 유지) 서가위치 조회 (kiosk proxy)
 // ============================================================
 app.post(`${PREFIX}/shelf-info`, async (c) => {
   try {
@@ -265,7 +305,7 @@ app.post(`${PREFIX}/shelf-info`, async (c) => {
 });
 
 // ============================================================
-// GET /shelf-test — single ISBN diagnostic
+// GET /shelf-test — (기존 유지) single ISBN diagnostic
 // ============================================================
 app.get(`${PREFIX}/shelf-test`, async (c) => {
   const site = c.req.query("site") || "01";
