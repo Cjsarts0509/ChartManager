@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { BookWithTrend } from '../lib/types';
-import { ShelfInfoMap, ShelfResult, fetchShelfInfo, clearShelfCache } from '../../lib/cloud';
+import { ShelfInfoMap, ShelfResult, fetchShelfInfo, clearShelfCache, getShelfFromCache, clearShelfCacheForIsbn } from '../../lib/cloud';
 import { Minus, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { BookCoverModal } from './BookCoverModal';
@@ -85,19 +85,57 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
     fetchSingleShelf(book.isbn);
   }, [storeCode, isMobile, showShelfRow, expandedIsbns, fetchSingleShelf]);
 
-  /** 서가 전체 조회 — 모든 도서 일괄 fetch + 전체 펼침 */
+  /** 서가 전체 조회 — 모든 도서 1건씩 순차 fetch (2초 간격) + 전체 펼침 */
   useImperativeHandle(ref, () => ({
     fetchAllShelves: () => {
       if (!storeCode || !showShelfRow) return;
       const isbns = books.map(b => b.isbn);
       // 전체 펼침
       setExpandedIsbns(new Set(isbns));
-      // 아직 캐시에 없는 것만 fetch
-      isbns.forEach(isbn => {
-        if (shelfInfo[isbn] === undefined) {
-          fetchSingleShelf(isbn);
+      // 아직 캐시에 없는 것만 순차 fetch (2초 간격)
+      const uncached = isbns.filter(isbn => shelfInfo[isbn] === undefined);
+      if (uncached.length === 0) return;
+      
+      const sc = storeCode; // 클로저에 캡처
+
+      (async () => {
+        // 1차 순회: 전체 ISBN 순차 fetch
+        for (let i = 0; i < uncached.length; i++) {
+          await fetchSingleShelf(uncached[i]);
+          if (i < uncached.length - 1) {
+            await new Promise(r => setTimeout(r, 2000));
+          }
         }
-      });
+
+        // 1차 완료 후 메모리 캐시에서 실패한 ISBN 수집 (null = 조회했으나 서가 없음/프록시 실패)
+        const failed = uncached.filter(isbn => {
+          const cached = getShelfFromCache(sc, isbn);
+          return cached === null; // null이면 실패, undefined면 아직 미조회(있을 수 없지만 방어)
+        });
+
+        if (failed.length === 0) {
+          console.log(`[shelf] 1차 전체 성공 — 재시도 없음`);
+          return;
+        }
+
+        console.log(`[shelf] 1차 완료 — 실패 ${failed.length}건 재시도 시작:`, failed);
+
+        // 2차 재시도: 실패한 ISBN의 캐시를 지우고 다시 fetch
+        for (let i = 0; i < failed.length; i++) {
+          // 캐시 삭제 → fetchSingleShelf가 "이미 있음" 스킵하지 않도록
+          clearShelfCacheForIsbn(sc, failed[i]);
+          setShelfInfo(prev => {
+            const next = { ...prev };
+            delete next[failed[i]];
+            return next;
+          });
+          await fetchSingleShelf(failed[i]);
+          if (i < failed.length - 1) {
+            await new Promise(r => setTimeout(r, 2000));
+          }
+        }
+        console.log(`[shelf] 2차 재시도 완료`);
+      })();
     },
   }), [storeCode, showShelfRow, books, shelfInfo, fetchSingleShelf]);
 

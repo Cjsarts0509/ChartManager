@@ -357,49 +357,55 @@ const shelfCache = new Map<string, ShelfResult | null>();
 // 중복 호출 방지 — ISBN별 개별 추적
 const shelfFetchingIsbns = new Set<string>();
 
-/** CORS 프록시를 통해 단일 URL fetch — codetabs 20초 1차 → 10초 2차 → 10초 3차 */
-async function fetchViaProxy(targetUrl: string): Promise<string | null> {
-  const attempts: { name: string; url: string; timeout: number }[] = [
-    {
-      name: 'codetabs (1차)',
-      url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
-      timeout: 20000,
-    },
-    {
-      name: 'codetabs (2차 재시도)',
-      url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
-      timeout: 10000,
-    },
-    {
-      name: 'codetabs (3차 재시도)',
-      url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
-      timeout: 10000,
-    },
-  ];
+/** 메모리 캐시에서 서가 정보 조회 (null = 조회했으나 실패, undefined = 미조회) */
+export function getShelfFromCache(storeCode: string, isbn: string): ShelfResult | null | undefined {
+  const cacheKey = `${storeCode}:${isbn}`;
+  return shelfCache.has(cacheKey) ? shelfCache.get(cacheKey)! : undefined;
+}
 
-  for (const attempt of attempts) {
+/** 특정 ISBN의 서가 캐시 삭제 (재시도 시 사용) */
+export function clearShelfCacheForIsbn(storeCode: string, isbn: string): void {
+  shelfCache.delete(`${storeCode}:${isbn}`);
+}
+
+/** CORS 프록시 — Cloudflare Worker (1순위) + allorigins (fallback), 5초 타임아웃, 최대 3회 재시도 */
+const CF_PROXY = 'https://kyobo-proxy.4rumarts.workers.dev';
+
+async function fetchViaProxy(targetUrl: string): Promise<string | null> {
+  const encoded = encodeURIComponent(targetUrl);
+  const proxies = [
+    { name: 'cf-worker', url: `${CF_PROXY}/?url=${encoded}` },
+    { name: 'allorigins', url: `https://api.allorigins.win/raw?url=${encoded}` },
+  ];
+  // CF Worker 2회 → allorigins 1회 (총 3회)
+  const attempts = [proxies[0], proxies[0], proxies[1]];
+
+  for (let i = 0; i < attempts.length; i++) {
+    const proxy = attempts[i];
     try {
-      console.log(`[shelf]   → ${attempt.name} 시도 중... (timeout ${attempt.timeout/1000}s)`);
+      console.log(`[shelf]   → ${proxy.name} 시도 ${i + 1}/${attempts.length} (timeout 5s)`);
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), attempt.timeout);
-      const res = await fetch(attempt.url, { signal: controller.signal });
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(proxy.url, { signal: controller.signal });
       clearTimeout(timeoutId);
 
-      console.log(`[shelf]   → ${attempt.name} 응답: ${res.status} ${res.statusText}`);
-      if (!res.ok) continue;
+      if (!res.ok) {
+        console.log(`[shelf]   → 시도 ${i + 1} (${proxy.name}) 응답: ${res.status} ${res.statusText}`);
+        continue;
+      }
 
       const text = await res.text();
       if (text && text.length > 100) {
-        console.log(`[shelf]   → ${attempt.name} 성공: ${text.length}자`);
+        console.log(`[shelf]   → 시도 ${i + 1} (${proxy.name}) 성공: ${text.length}자`);
         return text;
       }
-      console.log(`[shelf]   → ${attempt.name} 응답 너무 짧음: ${text.length}자`);
+      console.log(`[shelf]   → 시도 ${i + 1} (${proxy.name}) 응답 너무 짧음: ${text?.length ?? 0}자`);
     } catch (err: any) {
-      const reason = err?.name === 'AbortError' ? `타임아웃(${attempt.timeout/1000}초)` : (err?.message || String(err));
-      console.warn(`[shelf]   → ${attempt.name} 실패: ${reason}`);
+      const reason = err?.name === 'AbortError' ? '타임아웃(5초)' : (err?.message || String(err));
+      console.warn(`[shelf]   → 시도 ${i + 1} (${proxy.name}) 실패: ${reason}`);
     }
   }
-  console.warn('[shelf]   → codetabs 3회 시도 모두 실패');
+  console.warn(`[shelf]   → 프록시 총 ${attempts.length}회 시도 모두 실패`);
   return null;
 }
 
