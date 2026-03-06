@@ -124,13 +124,8 @@ function removeLocalConfig(storeCode: string) {
 
 /**
  * 영업점별 조코드 설정 불러오기
- * 1) Supabase에서 조회 시도
- * 2) Supabase 성공 + 데이터 없음 → localStorage 캐시도 삭제 → null 반환
- * 3) Supabase 실패(네트워크 오류) → localStorage 폴백
- * 4) 둘 다 없으면 null (= 기본값 사용)
  */
 export async function fetchStoreCategoryConfig(storeCode: string): Promise<string[] | null> {
-  // Try Supabase first
   try {
     const res = await fetch(
       `${SUPABASE_REST}/${CATEGORY_TABLE}?store_code=eq.${storeCode}&select=categories`,
@@ -144,17 +139,14 @@ export async function fetchStoreCategoryConfig(storeCode: string): Promise<strin
     if (res.ok) {
       const rows = await res.json();
       if (rows.length > 0 && Array.isArray(rows[0].categories)) {
-        // Supabase 성공 → localStorage에도 캐싱
         setLocalConfig(storeCode, rows[0].categories);
         return rows[0].categories;
       }
-      // Supabase 정상 응답이지만 데이터 없음 → 캐시 삭제
       removeLocalConfig(storeCode);
       return null;
     }
   } catch (e) {
     console.warn('Supabase category config fetch failed, using localStorage:', e);
-    // 네트워크 실패 시에만 localStorage 폴백
     const local = getLocalConfigs();
     return local[storeCode] || null;
   }
@@ -164,14 +156,10 @@ export async function fetchStoreCategoryConfig(storeCode: string): Promise<strin
 
 /**
  * 영업점별 조코드 설정 저장
- * 1) Supabase UPSERT
- * 2) localStorage에도 저장 (캐시)
  */
 export async function saveStoreCategoryConfig(storeCode: string, categories: string[]): Promise<void> {
-  // Always save to localStorage
   setLocalConfig(storeCode, categories);
 
-  // Try Supabase upsert
   try {
     const res = await fetch(`${SUPABASE_REST}/${CATEGORY_TABLE}`, {
       method: 'POST',
@@ -190,7 +178,6 @@ export async function saveStoreCategoryConfig(storeCode: string, categories: str
     if (!res.ok) {
       console.warn('Supabase category config save failed:', res.status, await res.text());
     } else {
-      // 감사 로그 (저장 성공 후, 실패해도 무시)
       const categoryNames = categories.join(', ');
       writeAuditLog('config_save', storeCode, `조코드: ${categoryNames}`);
     }
@@ -201,25 +188,21 @@ export async function saveStoreCategoryConfig(storeCode: string, categories: str
 
 // ============================
 // Store Part Config (영업점별 파트 + 조코드 설정)
-// Supabase REST API + localStorage fallback
 // ============================
 
 const PART_CONFIG_KEY = 'store_part_config';
 
-/** 파트 내 조코드 항목 */
 export interface PartCategoryItem {
   code: string;
   rank: number;
 }
 
-/** 파트 설정 */
 export interface PartConfig {
   id: string;
   name: string;
   categories: PartCategoryItem[];
 }
 
-/** localStorage에서 파트 설정 읽기 */
 function getLocalPartConfigs(): Record<string, PartConfig[]> {
   try {
     const raw = localStorage.getItem(PART_CONFIG_KEY);
@@ -229,29 +212,19 @@ function getLocalPartConfigs(): Record<string, PartConfig[]> {
   }
 }
 
-/** localStorage에 파트 설정 저장 */
 function setLocalPartConfig(storeCode: string, parts: PartConfig[]) {
   const configs = getLocalPartConfigs();
   configs[storeCode] = parts;
   localStorage.setItem(PART_CONFIG_KEY, JSON.stringify(configs));
 }
 
-/** localStorage에서 특정 영업점 파트 설정 삭제 */
 function removeLocalPartConfig(storeCode: string) {
   const configs = getLocalPartConfigs();
   delete configs[storeCode];
   localStorage.setItem(PART_CONFIG_KEY, JSON.stringify(configs));
 }
 
-/**
- * 영업점별 파트 설정 불러오기
- * 1) Supabase에서 조회 시도
- * 2) Supabase 성공 + 데이터 없음 → localStorage 캐시도 삭제 → null 반환
- * 3) Supabase 실패(네트워크 오류) → localStorage 폴백
- * 4) 둘 다 없으면 null (= 기본값 사용)
- */
 export async function fetchStorePartConfig(storeCode: string): Promise<PartConfig[] | null> {
-  // Try Supabase first — 기존 categories JSONB 컬럼에 파트 배열을 저장
   try {
     const res = await fetch(
       `${SUPABASE_REST}/${CATEGORY_TABLE}?store_code=eq.${storeCode}&select=categories`,
@@ -266,20 +239,16 @@ export async function fetchStorePartConfig(storeCode: string): Promise<PartConfi
       const rows = await res.json();
       if (rows.length > 0 && rows[0].categories != null) {
         const data = rows[0].categories;
-        // 신규 파트 형식: { parts: PartConfig[] }
         if (typeof data === 'object' && !Array.isArray(data) && Array.isArray(data.parts)) {
           setLocalPartConfig(storeCode, data.parts);
           return data.parts;
         }
-        // 레거시: string[] → 파트 미설정으로 간주, 캐시 삭제
       }
-      // Supabase 정상 응답이지만 데이터 없음 → 캐시 삭제
       removeLocalPartConfig(storeCode);
       return null;
     }
   } catch (e) {
     console.warn('Supabase part config fetch failed, using localStorage:', e);
-    // 네트워크 실패 시에만 localStorage 폴백
     const local = getLocalPartConfigs();
     return local[storeCode] || null;
   }
@@ -287,17 +256,9 @@ export async function fetchStorePartConfig(storeCode: string): Promise<PartConfi
   return null;
 }
 
-/**
- * 영업점별 파트 설정 저장
- * 기존 categories JSONB 컬럼에 { parts: PartConfig[] } 형태로 저장
- * 1) Supabase UPSERT
- * 2) localStorage에도 저장 (캐시)
- */
 export async function saveStorePartConfig(storeCode: string, parts: PartConfig[]): Promise<void> {
-  // Always save to localStorage
   setLocalPartConfig(storeCode, parts);
 
-  // Try Supabase upsert — categories 컬럼에 래핑하여 저장
   try {
     const res = await fetch(`${SUPABASE_REST}/${CATEGORY_TABLE}`, {
       method: 'POST',
@@ -316,7 +277,6 @@ export async function saveStorePartConfig(storeCode: string, parts: PartConfig[]
     if (!res.ok) {
       console.warn('Supabase part config save failed:', res.status, await res.text());
     } else {
-      // 감사 로그 (저장 성공 후, 실패해도 무시)
       const partNames = parts.map(p => p.name).join(', ');
       writeAuditLog('config_save', storeCode, `파트: ${partNames}`);
     }
@@ -325,7 +285,6 @@ export async function saveStorePartConfig(storeCode: string, parts: PartConfig[]
   }
 }
 
-/** 기본 파트 생성: "기본" 파트에 전체 조코드 포함 */
 export function getDefaultParts(): PartConfig[] {
   return [{
     id: 'default-basic',
@@ -336,90 +295,62 @@ export function getDefaultParts(): PartConfig[] {
 
 // ============================
 // Shelf Location Info (서가위치 조회)
-// CORS 프록시 경유 → kiosk.kyobobook.co.kr (Edge Function 배포 불가 대응)
+// ⭐ Supabase Edge Function을 프록시로 사용하여 우회 우회 접속
 // ============================
 
 export interface ShelfLocation {
-  location: string;  // e.g., "[J관 2] 평대"
-  category: string;  // e.g., "한국소설 베스트 > (1) 베스트하단 MD"
+  location: string;
+  category: string;
 }
 
 export interface ShelfResult {
-  stock: string | null;    // e.g., "246부"
+  stock: string | null;
   locations: ShelfLocation[];
 }
 
 export type ShelfInfoMap = Record<string, ShelfResult | null>;
 
-// 메모리 캐시: 세션 동안 유지 (같은 영업점+ISBN 재조회 방지)
 const shelfCache = new Map<string, ShelfResult | null>();
-
-// 중복 호출 방지 — ISBN별 개별 추적
 const shelfFetchingIsbns = new Set<string>();
 
-/** CORS 프록시를 통해 단일 URL fetch — codetabs 20초 1차 → 10초 2차 → 10초 3차 */
-async function fetchViaProxy(targetUrl: string): Promise<string | null> {
-  const attempts: { name: string; url: string; timeout: number }[] = [
-    {
-      name: 'codetabs (1차)',
-      url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
-      timeout: 20000,
-    },
-    {
-      name: 'codetabs (2차 재시도)',
-      url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
-      timeout: 10000,
-    },
-    {
-      name: 'codetabs (3차 재시도)',
-      url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
-      timeout: 10000,
-    },
-  ];
-
-  for (const attempt of attempts) {
-    try {
-      console.log(`[shelf]   → ${attempt.name} 시도 중... (timeout ${attempt.timeout/1000}s)`);
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), attempt.timeout);
-      const res = await fetch(attempt.url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-
-      console.log(`[shelf]   → ${attempt.name} 응답: ${res.status} ${res.statusText}`);
-      if (!res.ok) continue;
-
-      const text = await res.text();
-      if (text && text.length > 100) {
-        console.log(`[shelf]   → ${attempt.name} 성공: ${text.length}자`);
-        return text;
+/** * Supabase Edge Function을 프록시로 사용하여 대상 URL의 HTML을 가져옵니다.
+ * 외부 무료 프록시 의존도를 없애고, CORS를 완벽하게 우회합니다.
+ */
+async function fetchViaSupabaseProxy(targetUrl: string): Promise<string | null> {
+  try {
+    const proxyUrl = `${BASE_URL}/proxy-shelf?url=${encodeURIComponent(targetUrl)}`;
+    
+    console.log(`[shelf] Supabase Proxy 요청 중...`);
+    const res = await fetch(proxyUrl, {
+      method: 'GET',
+      headers: { 
+        'Authorization': `Bearer ${publicAnonKey}`,
+        'apikey': publicAnonKey 
       }
-      console.log(`[shelf]   → ${attempt.name} 응답 너무 짧음: ${text.length}자`);
-    } catch (err: any) {
-      const reason = err?.name === 'AbortError' ? `타임아웃(${attempt.timeout/1000}초)` : (err?.message || String(err));
-      console.warn(`[shelf]   → ${attempt.name} 실패: ${reason}`);
+    });
+
+    if (!res.ok) {
+      console.warn(`[shelf] Supabase Proxy 에러 응답: ${res.status}`);
+      return null;
     }
+
+    const html = await res.text();
+    
+    // 정상적인 응답이 왔는지 대략적인 길이로 확인
+    if (html && html.length > 500) {
+      console.log(`[shelf] Supabase Proxy 성공: ${html.length}자 수신`);
+      return html;
+    }
+    console.warn(`[shelf] Supabase Proxy 비정상 응답 의심 (길이 짧음): ${html.length}자`);
+    return null;
+  } catch (err) {
+    console.error('[shelf] Supabase Proxy 통신 실패:', err);
+    return null;
   }
-  console.warn('[shelf]   → codetabs 3회 시도 모두 실패');
-  return null;
 }
 
 /**
- * 키오스크 HTML에서 서가 정보 파싱
- * 
- * 실제 DOM 구조 (DevTools에서 확인):
- *   div.p_stock
- *     └ div
- *       └ div
- *         └ dt
- *           ├ <strong> "[" "J관" "2" "]" </strong>
- *           ├ "평대"
- *           ├ <br>
- *           └ <span> "한국소설 베스트" " > (1) 베스트하단 MD" </span>
- *         └ dt  (2번째 서가가 있는 경우)
- *           ├ <strong> "[" "J관" "2" "]" </strong>
- *           ├ "평대"
- *           ├ <br>
- *           └ <span> "한국소설 베스트" </span>
+ * 키오스크/nflow HTML에서 서가 정보 파싱 (프론트엔드 파서)
  */
 function parseShelfHtml(html: string): ShelfResult {
   const out: ShelfLocation[] = [];
@@ -427,25 +358,21 @@ function parseShelfHtml(html: string): ShelfResult {
   try {
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
-    // 1차: div.p_stock 내 dt 요소들로 서가 정보 추출
+    // 1차: div.p_stock 내 dt 요소들로 서가 정보 추출 (구형 키오스크 패턴 유지)
     const stockDiv = doc.querySelector('.p_stock');
     if (stockDiv) {
       const dtElements = stockDiv.querySelectorAll('dt');
       console.log(`[shelf] p_stock 내 dt 요소: ${dtElements.length}개`);
 
       dtElements.forEach((dt, i) => {
-        if (out.length >= 2) return; // 최대 2개
+        if (out.length >= 2) return; 
 
-        // <strong> → "[J관 2]" 같은 위치 코드
         const strong = dt.querySelector('strong');
         const bracket = strong ? (strong.textContent || '').replace(/\s+/g, ' ').trim() : '';
 
-        // <span> → "한국소설 베스트" " > (1) 베스트하단 MD"
         const span = dt.querySelector('span');
         const category = span ? (span.textContent || '').replace(/\s+/g, ' ').trim() : '';
 
-        // <strong>과 <br> 사이의 텍스트 → "평대"
-        // dt의 직접 텍스트 노드에서 strong/span/br 제외한 부분
         let shelfType = '';
         dt.childNodes.forEach(node => {
           if (node.nodeType === Node.TEXT_NODE) {
@@ -456,15 +383,13 @@ function parseShelfHtml(html: string): ShelfResult {
           }
         });
 
-        if (!bracket && !shelfType && !category) return; // 빈 dt 스킵
+        if (!bracket && !shelfType && !category) return;
 
         const location = [bracket, shelfType].filter(Boolean).join(' ').trim();
         console.log(`[shelf] dt[${i}]: location="${location}", category="${category}"`);
         out.push({ location, category });
       });
 
-      // 재고 정보 추출: div.p_stock > div > strong 에 "재고: 246부" 형태
-      // dt 내부의 strong(서가 bracket)이 아닌, dt 외부 strong에서 "재고" 키워드 탐색
       const allStrongs = stockDiv.querySelectorAll('strong');
       allStrongs.forEach((s) => {
         if (stock) return;
@@ -472,16 +397,13 @@ function parseShelfHtml(html: string): ShelfResult {
         const m = txt.match(/재고\s*[:\s]\s*(\d[\d,]*)\s*부/);
         if (m) {
           stock = m[1].replace(/,/g, '');
-          console.log(`[shelf] 재고 발견: "${stock}부" (원문: "${txt}")`);
         }
       });
-      // 폴백: p_stock 전체 텍트에서 재고 패턴 탐색
       if (!stock) {
         const fullText = (stockDiv.textContent || '').replace(/\s+/g, ' ').trim();
         const fm = fullText.match(/재고\s*[:\s]\s*(\d[\d,]*)\s*부/);
         if (fm) {
           stock = fm[1].replace(/,/g, '');
-          console.log(`[shelf] 재고 폴백: "${stock}부"`);
         }
       }
     }
@@ -496,7 +418,6 @@ function parseShelfHtml(html: string): ShelfResult {
         const afterMarker = text.substring(idx + marker.length).trim();
         console.log('[shelf] 폴백 - 도서위치 원문:', afterMarker.slice(0, 120));
         if (!/^ISBN\s*\d/.test(afterMarker)) {
-          // [X관 N] 패턴 탐색
           const bracketRegex = /\[([^\]]+)\]\s*/g;
           let m;
           while ((m = bracketRegex.exec(afterMarker)) !== null && out.length < 2) {
@@ -525,7 +446,7 @@ function parseShelfHtml(html: string): ShelfResult {
 }
 
 /**
- * 서가위치 정보 조회 (CORS 프록시 경유, 브라우저에서 직접 파싱)
+ * 서가위치 정보 조회 (나만의 Supabase 프록시 경유 적용)
  */
 export async function fetchShelfInfo(
   storeCode: string,
@@ -545,7 +466,6 @@ export async function fetchShelfInfo(
 
   if (uncached.length === 0) return result;
 
-  // 중복 호출 방지 — ISBN별 개별 추적
   const alreadyFetching = uncached.filter(isbn => shelfFetchingIsbns.has(isbn));
   if (alreadyFetching.length > 0) {
     console.log('[shelf] 이미 조회 중 → 스킵:', alreadyFetching);
@@ -556,22 +476,28 @@ export async function fetchShelfInfo(
   console.log(`[shelf] 서가 조회 시작: storeCode=${storeCode}, ${uncached.length}건`);
 
   try {
-    // 4씩 병렬 처리
     for (let i = 0; i < uncached.length; i += 4) {
       const chunk = uncached.slice(i, i + 4);
       console.log(`[shelf] 청크 ${Math.floor(i/4)+1}: ${chunk.map(x => x.replace(/[-\s]/g,'')).join(', ')}`);
+      
       const results = await Promise.allSettled(chunk.map(async (isbn) => {
         const clean = isbn.replace(/[-\s]/g, '');
-        const kioskUrl = `https://kiosk.kyobobook.co.kr/bookInfoInk?site=${storeCode}&barcode=${clean}&ejkGb=KOR`;
+        
+        // ⭐ nflow 통합망 URL 적용 (isPrint=1 제거)
+        const kioskUrl = `https://store-nflow-web.kyobobook.co.kr/store/view/v1/business/mnls/location-infm?site=${storeCode}&barcode=${clean}&ejkGb=KOR&mode=Pc&service_gb=KB`;
+        
         console.log(`[shelf] ${clean}: fetch 시작`);
         try {
-          const html = await fetchViaProxy(kioskUrl);
+          // 무료 프록시 배열 대신 Supabase Edge Function 하나만 호출
+          const html = await fetchViaSupabaseProxy(kioskUrl);
+          
           if (!html) {
-            console.log(`[shelf] ${clean}: HTML 없음 (모든 프록시 실패)`);
+            console.log(`[shelf] ${clean}: HTML 없음 (Supabase 프록시 실패)`);
             result[isbn] = null;
             shelfCache.set(`${storeCode}:${isbn}`, null);
             return;
           }
+          
           console.log(`[shelf] ${clean}: HTML ${html.length}자 수신, 파싱 시작`);
           const parsed = parseShelfHtml(html);
           const val = parsed.locations.length > 0 ? parsed : null;
@@ -589,14 +515,12 @@ export async function fetchShelfInfo(
       console.log(`[shelf] 청크 ${Math.floor(i/4)+1} 완료:`, results.map(r => r.status));
     }
   } finally {
-    // 중복 호출 방지 플래그 해제
     uncached.forEach(isbn => shelfFetchingIsbns.delete(isbn));
   }
 
   return result;
 }
 
-/** 영업점 변경 시 서가 캐시 초기화 */
 export function clearShelfCache(): void {
   shelfCache.clear();
 }
@@ -607,7 +531,6 @@ export function clearShelfCache(): void {
 
 const AUDIT_TABLE = 'audit_log';
 
-/** IP 주소 가져오기 (캐시) */
 let cachedIp: string | null = null;
 async function getClientIp(): Promise<string> {
   if (cachedIp) return cachedIp;
@@ -621,22 +544,17 @@ async function getClientIp(): Promise<string> {
   }
 }
 
-/**
- * 에러 로그 중복 방지 throttle (5분)
- * key = action + detail 해시 → 5분 내 같은 에러 재기록 방지
- */
 const recentErrorKeys = new Map<string, number>();
-const ERROR_THROTTLE_MS = 5 * 60 * 1000; // 5분
+const ERROR_THROTTLE_MS = 5 * 60 * 1000;
 
 function isErrorThrottled(action: string, detail?: string): boolean {
   const key = `${action}::${detail || ''}`;
   const now = Date.now();
   const lastTime = recentErrorKeys.get(key);
   if (lastTime && now - lastTime < ERROR_THROTTLE_MS) {
-    return true; // 아직 5분 안 지남 → 스킵
+    return true; 
   }
   recentErrorKeys.set(key, now);
-  // 오래된 엔트리 정리 (100개 초과 시)
   if (recentErrorKeys.size > 100) {
     for (const [k, t] of recentErrorKeys) {
       if (now - t > ERROR_THROTTLE_MS) recentErrorKeys.delete(k);
@@ -645,12 +563,6 @@ function isErrorThrottled(action: string, detail?: string): boolean {
   return false;
 }
 
-/**
- * 감사 로그 기록
- * @param action - 'file_upload' | 'config_save' | 'error' | 'error_global'
- * @param storeCode - 영업점 코드
- * @param detail - 추가 정보 (파일명, 파트명, 에러 메시지 등)
- */
 export async function writeAuditLog(
   action: string,
   storeCode: string | null,
@@ -680,12 +592,6 @@ export async function writeAuditLog(
   }
 }
 
-/**
- * 에러 전용 로그 (5분 중복 방지 throttle 적용)
- * @param source - 에러 발생 위치 (예: 'cloud_fetch', 'upload', 'global_error')
- * @param error - Error 객체 또는 메시지
- * @param storeCode - 영업점 코드 (있으면)
- */
 export async function writeErrorLog(
   source: string,
   error: unknown,
@@ -694,9 +600,8 @@ export async function writeErrorLog(
   const message = error instanceof Error
     ? `${error.name}: ${error.message}`
     : String(error);
-  const detail = `[${source}] ${message}`.slice(0, 1000); // 최대 1000자
+  const detail = `[${source}] ${message}`.slice(0, 1000);
 
-  // throttle 체크
   if (isErrorThrottled('error', detail)) {
     return;
   }
@@ -704,12 +609,6 @@ export async function writeErrorLog(
   await writeAuditLog('error', storeCode || null, detail);
 }
 
-/**
- * 전역 에러 핸들러 설치 (앱 초기화 시 1회 호출)
- * - window.onerror: 동기 에러
- * - window.onunhandledrejection: 비동기 Promise 에러
- */
-// 브라우저 확장/번역 등 외부 DOM 조작으로 발생하는 무해한 에러 필터
 const IGNORED_ERRORS = [
   'removeChild',
   'insertBefore',
@@ -722,9 +621,6 @@ function isIgnoredError(msg: string): boolean {
 }
 
 export function installGlobalErrorLogger(): void {
-  // ── DOM API 패치: 브라우저 확장/번역이 건드린 노드로 인한 React 크래시 근본 차단 ──
-  // React가 removeChild/insertBefore 호출 시 에러가 나면 조용히 무시하여
-  // 컴포넌트 트리 언마운트(흰 화면)를 방지
   patchDomForExtensions();
 
   window.onerror = (message, source, lineno, colno, error) => {
@@ -741,11 +637,6 @@ export function installGlobalErrorLogger(): void {
   };
 }
 
-/**
- * DOM API 패치: 브라우저 확장/번역이 건드린 노드로 인한 React 크래시 근본 차단
- * React가 removeChild/insertBefore 호출 시 에러가 나면 조용히 무시하여
- * 컴포넌트 트리 언마운트(흰 화면)를 방지
- */
 function patchDomForExtensions() {
   const originalRemoveChild = Node.prototype.removeChild;
   const originalInsertBefore = Node.prototype.insertBefore;
