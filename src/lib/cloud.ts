@@ -368,8 +368,23 @@ export function clearShelfCacheForIsbn(storeCode: string, isbn: string): void {
   shelfCache.delete(`${storeCode}:${isbn}`);
 }
 
+/** ISBN 접두사로 교보 키오스크 ejkGb 코드 판별 */
+export function getEjkGb(isbn: string): string {
+  const clean = isbn.replace(/[-\s]/g, '');
+  if (clean.startsWith('9784') || clean.startsWith('49')) return 'JAP';
+  if (clean.startsWith('9780') || clean.startsWith('9781')) return 'ENG';
+  return 'KOR';
+}
+
 /** CORS 프록시 — Cloudflare Worker (1순위) + allorigins (fallback), 5초 타임아웃, 최대 3회 재시도 */
 const CF_PROXY = 'https://kyobo-proxy.4rumarts.workers.dev';
+
+/** 랜덤 딜레이 (min~max ms) */
+function randomDelay(minMs: number, maxMs: number): Promise<void> {
+  const ms = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+  console.log(`[shelf]   ⏱ 랜덤 지터: ${ms}ms`);
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 async function fetchViaProxy(targetUrl: string): Promise<string | null> {
   const encoded = encodeURIComponent(targetUrl);
@@ -399,7 +414,7 @@ async function fetchViaProxy(targetUrl: string): Promise<string | null> {
         console.log(`[shelf]   → 시도 ${i + 1} (${proxy.name}) 성공: ${text.length}자`);
         return text;
       }
-      console.log(`[shelf]   → 시도 ${i + 1} (${proxy.name}) 응답 너무 짧음: ${text?.length ?? 0}자`);
+      console.log(`[shelf]   → 시도 ${i + 1} (${proxy.name}) 응답 무 짧음: ${text?.length ?? 0}자`);
     } catch (err: any) {
       const reason = err?.name === 'AbortError' ? '타임아웃(5초)' : (err?.message || String(err));
       console.warn(`[shelf]   → 시도 ${i + 1} (${proxy.name}) 실패: ${reason}`);
@@ -568,7 +583,7 @@ export async function fetchShelfInfo(
       console.log(`[shelf] 청크 ${Math.floor(i/4)+1}: ${chunk.map(x => x.replace(/[-\s]/g,'')).join(', ')}`);
       const results = await Promise.allSettled(chunk.map(async (isbn) => {
         const clean = isbn.replace(/[-\s]/g, '');
-        const kioskUrl = `https://kiosk.kyobobook.co.kr/bookInfoInk?site=${storeCode}&barcode=${clean}&ejkGb=KOR`;
+        const kioskUrl = `https://kiosk.kyobobook.co.kr/bookInfoInk?site=${storeCode}&barcode=${clean}&ejkGb=${getEjkGb(clean)}`;
         console.log(`[shelf] ${clean}: fetch 시작`);
         try {
           const html = await fetchViaProxy(kioskUrl);
@@ -593,6 +608,10 @@ export async function fetchShelfInfo(
         }
       }));
       console.log(`[shelf] 청크 ${Math.floor(i/4)+1} 완료:`, results.map(r => r.status));
+      // 청크 간 랜덤 지터 (0.3~0.8초) — 봇 탐지 패턴 회피
+      if (i + 4 < uncached.length) {
+        await randomDelay(300, 800);
+      }
     }
   } finally {
     // 중복 호출 방지 플래그 해제

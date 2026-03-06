@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { BookWithTrend } from '../lib/types';
-import { ShelfInfoMap, ShelfResult, fetchShelfInfo, clearShelfCache, getShelfFromCache, clearShelfCacheForIsbn } from '../../lib/cloud';
+import { ShelfInfoMap, ShelfResult, fetchShelfInfo, clearShelfCache, getShelfFromCache, clearShelfCacheForIsbn, getEjkGb } from '../../lib/cloud';
 import { Minus, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { BookCoverModal } from './BookCoverModal';
@@ -64,7 +64,7 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
     }
   }, [storeCode, shelfInfo]);
 
-  /** 도서명 클릭 → 서가 개별 조회 (모바일) 또는 팝업 (데스크톱) */
+  /** 도서명 클릭 → 서가 개��� 조회 (모바일) 또는 팝업 (데스크톱) */
   const handleTitleClick = useCallback(async (book: BookWithTrend) => {
     if (!storeCode) return;
 
@@ -92,7 +92,7 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
       const isbns = books.map(b => b.isbn);
       // 전체 펼침
       setExpandedIsbns(new Set(isbns));
-      // 아직 캐시에 없는 것만 순차 fetch (2초 간격)
+      // 아직 캐시에 없는 것만 순차 fetch
       const uncached = isbns.filter(isbn => shelfInfo[isbn] === undefined);
       if (uncached.length === 0) return;
       
@@ -103,7 +103,7 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
         for (let i = 0; i < uncached.length; i++) {
           await fetchSingleShelf(uncached[i]);
           if (i < uncached.length - 1) {
-            await new Promise(r => setTimeout(r, 2000));
+            await new Promise(r => setTimeout(r, 300 + Math.random() * 500));
           }
         }
 
@@ -131,7 +131,7 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
           });
           await fetchSingleShelf(failed[i]);
           if (i < failed.length - 1) {
-            await new Promise(r => setTimeout(r, 2000));
+            await new Promise(r => setTimeout(r, 300 + Math.random() * 500));
           }
         }
         console.log(`[shelf] 2차 재시도 완료`);
@@ -142,7 +142,7 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
   const openKioskWindow = (book: BookWithTrend) => {
     if (!storeCode) return;
     const cleanIsbn = book.isbn.replace(/[-\s]/g, '');
-    const kioskUrl = `https://kiosk.kyobobook.co.kr/bookInfoInk?site=${storeCode}&barcode=${cleanIsbn}&ejkGb=KOR`;
+    const kioskUrl = `https://kiosk.kyobobook.co.kr/bookInfoInk?site=${storeCode}&barcode=${cleanIsbn}&ejkGb=${getEjkGb(cleanIsbn)}`;
     const popupW = 540;
     const popupH = Math.min(window.screen.availHeight - 100, 900);
     const left = window.screenX + Math.round((window.outerWidth - popupW) / 2);
