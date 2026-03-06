@@ -290,6 +290,40 @@ app.get(`${PREFIX}/shelf-test`, async (c) => {
 });
 
 // ============================================================
+// GET /kiosk-proxy — 단순 HTML 프록시 (Frontend 파싱용)
+// 브라우저 User-Agent를 사용하여 교보문고 봇 차단 우회
+// ============================================================
+app.get(`${PREFIX}/kiosk-proxy`, async (c) => {
+  try {
+    const targetUrl = c.req.query("url");
+    if (!targetUrl) {
+      return c.json({ error: "url parameter is required" }, 400);
+    }
+
+    const res = await fetch(targetUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": "https://kiosk.kyobobook.co.kr/"
+      },
+    });
+
+    if (!res.ok) {
+      return c.text(`Target responded with status: ${res.status}`, res.status);
+    }
+
+    const html = await res.text();
+    return c.text(html, 200, {
+      "Content-Type": "text/html; charset=utf-8",
+    });
+  } catch (e) {
+    console.log("kiosk-proxy error: " + String(e));
+    return c.json({ error: String(e) }, 500);
+  }
+});
+
+// ============================================================
 // Shelf HTML parser (순수 함수, 외부 의존 없음)
 // ============================================================
 function doParseShelf(html: string): Array<{ location: string; category: string }> {
