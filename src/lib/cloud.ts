@@ -1,7 +1,7 @@
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { CATEGORIES } from './constants';
 
-const BASE_URL = `https://${projectId}.supabase.co/functions/v1/server`;
+const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-22196a99`;
 
 export interface CloudFileInfo {
   exists: boolean;
@@ -336,6 +336,7 @@ export function getDefaultParts(): PartConfig[] {
 
 // ============================
 // Shelf Location Info (서가위치 조회)
+// CORS 프록시 경유 → kiosk.kyobobook.co.kr (Edge Function 배포 불가 대응)
 // ============================
 
 export interface ShelfLocation {
@@ -356,42 +357,69 @@ const shelfCache = new Map<string, ShelfResult | null>();
 // 중복 호출 방지 — ISBN별 개별 추적
 const shelfFetchingIsbns = new Set<string>();
 
-/** CORS 프록시를 통해 단일 URL fetch (Supabase 자체 프록시 사용) */
+/** CORS 프록시를 통해 단일 URL fetch — codetabs 20초 1차 → 10초 2차 → 10초 3차 */
 async function fetchViaProxy(targetUrl: string): Promise<string | null> {
-  const proxyUrl = `${BASE_URL}/kiosk-proxy?url=${encodeURIComponent(targetUrl)}`;
+  const attempts: { name: string; url: string; timeout: number }[] = [
+    {
+      name: 'codetabs (1차)',
+      url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
+      timeout: 20000,
+    },
+    {
+      name: 'codetabs (2차 재시도)',
+      url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
+      timeout: 10000,
+    },
+    {
+      name: 'codetabs (3차 재시도)',
+      url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
+      timeout: 10000,
+    },
+  ];
 
-  try {
-    console.log(`[shelf]   → Supabase Proxy 시도 중...`);
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15초 타임아웃
-    
-    const res = await fetch(proxyUrl, {
-      headers: { 
-        'Authorization': `Bearer ${publicAnonKey}` 
-      },
-      signal: controller.signal 
-    });
-    clearTimeout(timeoutId);
+  for (const attempt of attempts) {
+    try {
+      console.log(`[shelf]   → ${attempt.name} 시도 중... (timeout ${attempt.timeout/1000}s)`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), attempt.timeout);
+      const res = await fetch(attempt.url, { signal: controller.signal });
+      clearTimeout(timeoutId);
 
-    console.log(`[shelf]   → Supabase Proxy 응답: ${res.status} ${res.statusText}`);
-    if (!res.ok) return null;
+      console.log(`[shelf]   → ${attempt.name} 응답: ${res.status} ${res.statusText}`);
+      if (!res.ok) continue;
 
-    const text = await res.text();
-    if (text && text.length > 100) {
-      console.log(`[shelf]   → Supabase Proxy 성공: ${text.length}자`);
-      return text;
+      const text = await res.text();
+      if (text && text.length > 100) {
+        console.log(`[shelf]   → ${attempt.name} 성공: ${text.length}자`);
+        return text;
+      }
+      console.log(`[shelf]   → ${attempt.name} 응답 너무 짧음: ${text.length}자`);
+    } catch (err: any) {
+      const reason = err?.name === 'AbortError' ? `타임아웃(${attempt.timeout/1000}초)` : (err?.message || String(err));
+      console.warn(`[shelf]   → ${attempt.name} 실패: ${reason}`);
     }
-    console.log(`[shelf]   → Supabase Proxy 응답 너무 짧음: ${text.length}자`);
-    return null;
-  } catch (err: any) {
-    const reason = err?.name === 'AbortError' ? '타임아웃(15초)' : (err?.message || String(err));
-    console.warn(`[shelf]   → Supabase Proxy 실패: ${reason}`);
-    return null;
   }
+  console.warn('[shelf]   → codetabs 3회 시도 모두 실패');
+  return null;
 }
 
 /**
  * 키오스크 HTML에서 서가 정보 파싱
+ * 
+ * 실제 DOM 구조 (DevTools에서 확인):
+ *   div.p_stock
+ *     └ div
+ *       └ div
+ *         └ dt
+ *           ├ <strong> "[" "J관" "2" "]" </strong>
+ *           ├ "평대"
+ *           ├ <br>
+ *           └ <span> "한국소설 베스트" " > (1) 베스트하단 MD" </span>
+ *         └ dt  (2번째 서가가 있는 경우)
+ *           ├ <strong> "[" "J관" "2" "]" </strong>
+ *           ├ "평대"
+ *           ├ <br>
+ *           └ <span> "한국소설 베스트" </span>
  */
 function parseShelfHtml(html: string): ShelfResult {
   const out: ShelfLocation[] = [];
@@ -416,6 +444,8 @@ function parseShelfHtml(html: string): ShelfResult {
         const span = dt.querySelector('span');
         const category = span ? (span.textContent || '').replace(/\s+/g, ' ').trim() : '';
 
+        // <strong>과 <br> 사이의 텍스트 → "평대"
+        // dt의 직접 텍스트 노드에서 strong/span/br 제외한 부분
         let shelfType = '';
         dt.childNodes.forEach(node => {
           if (node.nodeType === Node.TEXT_NODE) {
@@ -433,7 +463,8 @@ function parseShelfHtml(html: string): ShelfResult {
         out.push({ location, category });
       });
 
-      // 재고 정보 추출
+      // 재고 정보 추출: div.p_stock > div > strong 에 "재고: 246부" 형태
+      // dt 내부의 strong(서가 bracket)이 아닌, dt 외부 strong에서 "재고" 키워드 탐색
       const allStrongs = stockDiv.querySelectorAll('strong');
       allStrongs.forEach((s) => {
         if (stock) return;
@@ -444,7 +475,7 @@ function parseShelfHtml(html: string): ShelfResult {
           console.log(`[shelf] 재고 발견: "${stock}부" (원문: "${txt}")`);
         }
       });
-      // 폴백: p_stock 전체 텍스트에서 재고 패턴 탐색
+      // 폴백: p_stock 전체 텍트에서 재고 패턴 탐색
       if (!stock) {
         const fullText = (stockDiv.textContent || '').replace(/\s+/g, ' ').trim();
         const fm = fullText.match(/재고\s*[:\s]\s*(\d[\d,]*)\s*부/);
@@ -494,7 +525,7 @@ function parseShelfHtml(html: string): ShelfResult {
 }
 
 /**
- * 서가위치 정보 조회
+ * 서가위치 정보 조회 (CORS 프록시 경유, 브라우저에서 직접 파싱)
  */
 export async function fetchShelfInfo(
   storeCode: string,
@@ -514,7 +545,7 @@ export async function fetchShelfInfo(
 
   if (uncached.length === 0) return result;
 
-  // 중복 호출 방지
+  // 중복 호출 방지 — ISBN별 개별 추적
   const alreadyFetching = uncached.filter(isbn => shelfFetchingIsbns.has(isbn));
   if (alreadyFetching.length > 0) {
     console.log('[shelf] 이미 조회 중 → 스킵:', alreadyFetching);
@@ -558,6 +589,7 @@ export async function fetchShelfInfo(
       console.log(`[shelf] 청크 ${Math.floor(i/4)+1} 완료:`, results.map(r => r.status));
     }
   } finally {
+    // 중복 호출 방지 플래그 해제
     uncached.forEach(isbn => shelfFetchingIsbns.delete(isbn));
   }
 
@@ -591,6 +623,7 @@ async function getClientIp(): Promise<string> {
 
 /**
  * 에러 로그 중복 방지 throttle (5분)
+ * key = action + detail 해시 → 5분 내 같은 에러 재기록 방지
  */
 const recentErrorKeys = new Map<string, number>();
 const ERROR_THROTTLE_MS = 5 * 60 * 1000; // 5분
@@ -614,6 +647,9 @@ function isErrorThrottled(action: string, detail?: string): boolean {
 
 /**
  * 감사 로그 기록
+ * @param action - 'file_upload' | 'config_save' | 'error' | 'error_global'
+ * @param storeCode - 영업점 코드
+ * @param detail - 추가 정보 (파일명, 파트명, 에러 메시지 등)
  */
 export async function writeAuditLog(
   action: string,
@@ -646,6 +682,9 @@ export async function writeAuditLog(
 
 /**
  * 에러 전용 로그 (5분 중복 방지 throttle 적용)
+ * @param source - 에러 발생 위치 (예: 'cloud_fetch', 'upload', 'global_error')
+ * @param error - Error 객체 또는 메시지
+ * @param storeCode - 영업점 코드 (있으면)
  */
 export async function writeErrorLog(
   source: string,
@@ -665,6 +704,11 @@ export async function writeErrorLog(
   await writeAuditLog('error', storeCode || null, detail);
 }
 
+/**
+ * 전역 에러 핸들러 설치 (앱 초기화 시 1회 호출)
+ * - window.onerror: 동기 에러
+ * - window.onunhandledrejection: 비동기 Promise 에러
+ */
 // 브라우저 확장/번역 등 외부 DOM 조작으로 발생하는 무해한 에러 필터
 const IGNORED_ERRORS = [
   'removeChild',
@@ -679,6 +723,8 @@ function isIgnoredError(msg: string): boolean {
 
 export function installGlobalErrorLogger(): void {
   // ── DOM API 패치: 브라우저 확장/번역이 건드린 노드로 인한 React 크래시 근본 차단 ──
+  // React가 removeChild/insertBefore 호출 시 에러가 나면 조용히 무시하여
+  // 컴포넌트 트리 언마운트(흰 화면)를 방지
   patchDomForExtensions();
 
   window.onerror = (message, source, lineno, colno, error) => {
@@ -696,7 +742,9 @@ export function installGlobalErrorLogger(): void {
 }
 
 /**
- * DOM API 패치
+ * DOM API 패치: 브라우저 확장/번역이 건드린 노드로 인한 React 크래시 근본 차단
+ * React가 removeChild/insertBefore 호출 시 에러가 나면 조용히 무시하여
+ * 컴포넌트 트리 언마운트(흰 화면)를 방지
  */
 function patchDomForExtensions() {
   const originalRemoveChild = Node.prototype.removeChild;
