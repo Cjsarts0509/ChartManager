@@ -1,7 +1,7 @@
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { CATEGORIES } from './constants';
 
-const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-22196a99`;
+const BASE_URL = `https://${projectId}.supabase.co/functions/v1/server`;
 
 export interface CloudFileInfo {
   exists: boolean;
