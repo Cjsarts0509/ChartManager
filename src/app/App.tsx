@@ -313,9 +313,12 @@ export default function App() {
     };
     el.addEventListener('wheel', handler, { passive: false });
     return () => el.removeEventListener('wheel', handler);
-  }, []);
+  }, [isMobile]);
 
+  /** 드래그 시작 — 인터랙티브 요소(링크, 버튼 등) 위에서는 무시 */
   const handleMouseDown = (e: React.MouseEvent) => {
+    const tag = (e.target as HTMLElement).closest('a, button, input, select, textarea, [role="button"], [data-no-drag]');
+    if (tag) return;
     setIsDragging(true);
     dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
   };
@@ -406,7 +409,6 @@ export default function App() {
             <div 
               key={list.id} 
               className={`list-wrapper ${printingId && printingId !== list.id ? "print:hidden" : "print:block"}`}
-              onMouseDown={(e) => e.stopPropagation()}
             >
               <ListCard 
                 id={list.id}
