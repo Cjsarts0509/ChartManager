@@ -22,6 +22,109 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
+// ==========================================
+// Custom Cursor Component (마이크로 애니메이션)
+// ==========================================
+const CustomCursor = () => {
+  const mainCursor = useRef<HTMLDivElement>(null);
+  const ringCursor = useRef<HTMLDivElement>(null);
+  const [isHovering, setIsHovering] = useState(false);
+  const [isClicking, setIsClicking] = useState(false);
+  const [particles, setParticles] = useState<{ id: number; x: number; y: number }[]>([]);
+  const mousePos = useRef({ x: 0, y: 0 });
+  const mainPos = useRef({ x: 0, y: 0 });
+  const ringPos = useRef({ x: 0, y: 0 });
+  const requestRef = useRef<number>();
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => { mousePos.current = { x: e.clientX, y: e.clientY }; };
+    const onMouseDown = () => {
+      setIsClicking(true);
+      // 클릭 시 방사형 파티클 6개 생성
+      const newParticles = Array.from({ length: 6 }).map((_, i) => ({
+        id: Date.now() + i,
+        x: mousePos.current.x,
+        y: mousePos.current.y
+      }));
+      setParticles(newParticles);
+      setTimeout(() => setParticles([]), 600); // 파티클 애니메이션 후 정리
+    };
+    const onMouseUp = () => setIsClicking(false);
+
+    const updateHoverState = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('a, button, input, select, textarea, [role="button"], .cursor-pointer')) {
+        setIsHovering(true);
+      } else {
+        setIsHovering(false);
+      }
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('mouseover', updateHoverState);
+
+    const loop = () => {
+      // Main Cursor Lerp (0.15 추적)
+      mainPos.current.x += (mousePos.current.x - mainPos.current.x) * 0.15;
+      mainPos.current.y += (mousePos.current.y - mainPos.current.y) * 0.15;
+      
+      // Ring Cursor Lerp (0.08 관성)
+      ringPos.current.x += (mousePos.current.x - ringPos.current.x) * 0.08;
+      ringPos.current.y += (mousePos.current.y - ringPos.current.y) * 0.08;
+
+      if (mainCursor.current) {
+        mainCursor.current.style.transform = `translate3d(${mainPos.current.x}px, ${mainPos.current.y}px, 0) scale(${isClicking ? 0.7 : isHovering ? 1.3 : 1})`;
+      }
+      if (ringCursor.current) {
+        ringCursor.current.style.transform = `translate3d(${ringPos.current.x}px, ${ringPos.current.y}px, 0) scale(${isClicking ? 0.9 : isHovering ? 1.5 : 1})`;
+      }
+      requestRef.current = requestAnimationFrame(loop);
+    };
+    requestRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('mouseover', updateHoverState);
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    };
+  }, [isClicking, isHovering]);
+
+  return (
+    <>
+      <style>{`
+        body { cursor: none; }
+        @media print { .custom-cursor-layer { display: none !important; } body { cursor: auto; } }
+        @keyframes glowPulse { 0%, 100% { box-shadow: 0 0 10px 2px rgba(34,197,94,0.3); } 50% { box-shadow: 0 0 20px 6px rgba(34,197,94,0.6); } }
+        @keyframes particleBurst { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; } }
+      `}</style>
+      <div className="custom-cursor-layer fixed inset-0 pointer-events-none z-[99999]">
+        {/* Glow Ring */}
+        <div ref={ringCursor} className="absolute top-0 left-0 w-8 h-8 -ml-4 -mt-4 rounded-full border border-green-400/50 mix-blend-difference transition-transform duration-100 ease-out" style={{ animation: 'glowPulse 2s infinite ease-in-out' }} />
+        {/* Main Dot */}
+        <div ref={mainCursor} className="absolute top-0 left-0 w-3 h-3 -ml-1.5 -mt-1.5 bg-green-500 rounded-full mix-blend-difference transition-transform duration-75 ease-out shadow-[0_0_8px_rgba(34,197,94,0.8)]" />
+        {/* Particles */}
+        {particles.map((p, i) => {
+          const angle = (i / 6) * Math.PI * 2;
+          const dist = 40;
+          return (
+            <div key={p.id} className="absolute w-2 h-2 bg-green-400 rounded-full"
+                 style={{
+                   left: p.x, top: p.y,
+                   '--tx': `${Math.cos(angle) * dist}px`, '--ty': `${Math.sin(angle) * dist}px`,
+                   animation: 'particleBurst 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards'
+                 } as React.CSSProperties}
+            />
+          );
+        })}
+      </div>
+    </>
+  );
+};
+
 export default function App() {
   const [thisWeekData, setThisWeekData] = useState<ProcessedData>({ title: "", books: [] });
   const [lastWeekData, setLastWeekData] = useState<ProcessedData>({ title: "", books: [] });
@@ -308,7 +411,8 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-    <div className="h-screen w-screen bg-gradient-to-br from-indigo-50/50 via-purple-50/50 to-blue-50/50 overflow-hidden flex flex-col font-sans main-desktop-wrapper text-slate-800">
+    <div className="h-screen w-screen bg-gradient-to-br from-indigo-50/50 via-purple-50/50 to-blue-50/50 overflow-hidden flex flex-col font-sans main-desktop-wrapper text-slate-800 relative">
+      {!isMobile && <CustomCursor />}
       <Toaster position="top-center" />
       
       <div className="z-50 relative topbar-wrapper">
@@ -334,7 +438,7 @@ export default function App() {
       </div>
 
       <div 
-        className="flex-1 relative cursor-grab active:cursor-grabbing overflow-hidden canvas-area"
+        className="flex-1 relative overflow-hidden canvas-area"
         style={{
           backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(15, 23, 42, 0.05) 1px, transparent 0)',
           backgroundSize: '32px 32px'

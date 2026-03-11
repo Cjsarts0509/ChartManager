@@ -317,7 +317,7 @@ function WriteDialog({ initialData, onSave, onCancel, saving }: {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="glass-panel bg-white/90 rounded-2xl w-[90vw] max-w-[750px] max-h-[90vh] flex flex-col overflow-hidden"
+        className="glass-panel bg-white/95 backdrop-blur-2xl rounded-2xl w-[90vw] max-w-[750px] max-h-[90vh] flex flex-col overflow-hidden shadow-[0_20px_40px_rgba(0,0,0,0.15)]"
         onClick={e => e.stopPropagation()}
         data-no-drag
       >
@@ -384,7 +384,7 @@ function ViewDialog({ notice, onClose, onEdit, onDelete }: {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="glass-panel bg-white/90 rounded-2xl w-[90vw] max-w-[700px] max-h-[85vh] flex flex-col overflow-hidden"
+        className="glass-panel bg-white/95 backdrop-blur-2xl rounded-2xl w-[90vw] max-w-[700px] max-h-[85vh] flex flex-col overflow-hidden shadow-[0_20px_40px_rgba(0,0,0,0.15)]"
         onClick={e => e.stopPropagation()}
         data-no-drag
       >
@@ -408,7 +408,7 @@ function ViewDialog({ notice, onClose, onEdit, onDelete }: {
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto px-6 py-6 custom-scrollbar bg-white/50">
+        <div className="flex-1 overflow-auto px-6 py-6 custom-scrollbar bg-white/80">
           <div
             className="prose prose-sm max-w-none notice-content"
             dangerouslySetInnerHTML={{ __html: notice.content }}
@@ -539,7 +539,8 @@ export const InlineNoticePanel: React.FC<InlineNoticePanelProps> = ({ className 
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="glass-panel absolute top-full mt-2 left-1/2 -translate-x-1/2 w-[300px] bg-white/90 rounded-2xl z-[60] overflow-hidden flex flex-col"
+              // 배경 투명도를 낮추고 블러를 강화하여 시인성을 확보했습니다.
+              className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-[300px] bg-white/95 backdrop-blur-2xl shadow-[0_20px_40px_rgba(0,0,0,0.15)] rounded-2xl border border-gray-200 z-[60] overflow-hidden flex flex-col"
             >
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100/50 bg-slate-50/50">
                 <span className="text-xs font-bold text-slate-700">사내 공지사항</span>
