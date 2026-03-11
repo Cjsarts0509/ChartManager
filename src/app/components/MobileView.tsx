@@ -98,24 +98,30 @@ export const MobileView: React.FC<MobileViewProps> = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50/50 via-purple-50/50 to-blue-50/50 flex flex-col font-sans">
-      <div className="sticky top-0 z-50 glass-panel bg-white/70 border-b border-white/40 shadow-sm">
+      <div className="sticky top-0 z-[100] glass-panel bg-white/70 backdrop-blur-md border-b border-white/40 shadow-sm">
         <div className="grid px-3 pt-2 pb-1 gap-x-2 gap-y-1" style={{ gridTemplateColumns: '1fr auto' }}>
           <div className="relative min-w-0" ref={storePanelRef}>
-            <button onClick={() => { setShowStorePanel(prev => !prev); setShowPartPanel(false); }} className={`w-full flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs smooth-transition active:scale-95 border ${selectedStore ? 'bg-emerald-50/90 border-emerald-200 text-emerald-800 shadow-sm' : 'bg-white/60 border-gray-200 text-gray-600'}`}>
-              <MapPin size={13} className={selectedStore ? 'text-emerald-600' : 'text-gray-400'} />
-              {selectedStore ? <span className="font-semibold flex-1 text-left truncate"><span className="text-emerald-500 font-mono mr-1.5">{selectedStore.code}</span>{selectedStore.name}</span> : <span className="flex-1 text-left text-gray-400">영업점을 선택하세요</span>}
+            <button onClick={() => { setShowStorePanel(prev => !prev); setShowPartPanel(false); }} className={`w-full flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold smooth-transition active:scale-95 border border-transparent shadow-sm ${selectedStore ? 'bg-emerald-600 text-white' : 'bg-slate-500 text-white'}`}>
+              <MapPin size={13} className="text-white" />
+              {selectedStore ? <span className="flex-1 text-left truncate"><span className="text-emerald-200 font-mono mr-1.5">{selectedStore.code}</span>{selectedStore.name}</span> : <span className="flex-1 text-left">영업점 선택</span>}
               <ChevronDown size={12} className={`transition-transform shrink-0 ${showStorePanel ? 'rotate-180' : ''}`} />
             </button>
             <AnimatePresence>
               {showStorePanel && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="glass-panel absolute left-0 right-0 top-full mt-1 bg-white/95 rounded-2xl z-[60] overflow-hidden" style={{ width: 'calc(100vw - 24px)', maxWidth: 'calc(100vw - 24px)' }}>
-                  <div className="p-2 border-b border-gray-100/50"><div className="flex items-center gap-2 bg-gray-50/80 rounded-xl px-3 py-2"><Search size={14} className="text-gray-400 shrink-0" /><input type="text" value={storeSearch} onChange={(e) => setStoreSearch(e.target.value)} placeholder="코드 또는 영업점명 검색" className="flex-1 bg-transparent text-sm outline-none placeholder-gray-400" autoFocus />{storeSearch && <button onClick={() => setStoreSearch("")} className="p-0.5"><X size={12} className="text-gray-400" /></button>}</div></div>
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute left-0 right-0 top-full mt-1 bg-white/95 backdrop-blur-[40px] shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-gray-200 rounded-2xl z-[150] overflow-hidden" style={{ width: 'calc(100vw - 24px)', maxWidth: 'calc(100vw - 24px)' }}>
+                  <div className="p-2 border-b border-gray-100">
+                    <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2 border border-gray-200">
+                      <Search size={14} className="text-gray-500 shrink-0" />
+                      <input type="text" value={storeSearch} onChange={(e) => setStoreSearch(e.target.value)} placeholder="코드 또는 영업점명 검색" className="flex-1 bg-transparent text-sm font-bold outline-none placeholder-gray-400 text-gray-900" autoFocus />
+                      {storeSearch && <button onClick={() => setStoreSearch("")} className="p-0.5"><X size={12} className="text-gray-500" /></button>}
+                    </div>
+                  </div>
                   <div className="max-h-[50vh] overflow-y-auto">
                     {filteredStores.map(store => {
                       const isSelected = selectedStore?.code === store.code;
                       return (
-                        <button key={store.code} onClick={() => handleSelectStore(store)} className={`w-full flex items-center gap-3 px-4 py-3 text-left smooth-transition ${isSelected ? 'bg-emerald-50/80' : 'hover:bg-gray-50/50'}`}>
-                          <span className={`font-mono text-xs w-8 shrink-0 ${isSelected ? 'text-emerald-600 font-bold' : 'text-gray-400'}`}>{store.code}</span><span className={`text-sm flex-1 ${isSelected ? 'text-emerald-800 font-semibold' : 'text-gray-700'}`}>{store.name}</span>{isSelected && <div className="w-2 h-2 bg-emerald-500 rounded-full shrink-0 shadow-sm" />}
+                        <button key={store.code} onClick={() => handleSelectStore(store)} className={`w-full flex items-center gap-3 px-4 py-3 text-left smooth-transition font-bold ${isSelected ? 'bg-emerald-100 text-emerald-900' : 'hover:bg-gray-100 text-gray-800'}`}>
+                          <span className={`font-mono text-xs w-8 shrink-0 ${isSelected ? 'text-emerald-700' : 'text-gray-500'}`}>{store.code}</span><span className="text-sm flex-1">{store.name}</span>{isSelected && <div className="w-2 h-2 bg-emerald-600 rounded-full shrink-0 shadow-sm" />}
                         </button>
                       );
                     })}
@@ -125,24 +131,24 @@ export const MobileView: React.FC<MobileViewProps> = ({
             </AnimatePresence>
           </div>
           
-          <button onClick={onRefreshCloud} disabled={cloudLoading} className={`flex items-center justify-center gap-1 w-[52px] py-1.5 rounded-xl text-xs border smooth-transition active:scale-95 ${cloudLoading ? 'bg-emerald-50/80 border-emerald-200 text-emerald-600' : 'bg-white/60 border-gray-200 text-gray-600'}`}><RefreshCw size={13} className={cloudLoading ? 'animate-spin text-emerald-500' : ''} /><Cloud size={13} className={cloudLoading ? 'text-emerald-500' : 'text-gray-400'} /></button>
+          <button onClick={onRefreshCloud} disabled={cloudLoading} className={`flex items-center justify-center gap-1 w-[52px] py-1.5 rounded-xl text-xs font-bold border-transparent border smooth-transition active:scale-95 shadow-sm ${cloudLoading ? 'bg-teal-700 text-white' : 'bg-teal-600 hover:bg-teal-700 text-white'}`}><RefreshCw size={13} className={cloudLoading ? 'animate-spin' : ''} /><Cloud size={13} /></button>
 
           <div className="relative min-w-0" ref={partPanelRef}>
-            <button onClick={() => { if (!selectedStore || partsLoading || storeParts.length === 0) return; setShowPartPanel(prev => !prev); setShowStorePanel(false); }} className={`w-full flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs border smooth-transition active:scale-95 ${selectedPart ? 'bg-blue-50/90 border-blue-200 text-blue-800 shadow-sm' : selectedStore && storeParts.length > 0 ? 'bg-white/60 border-gray-200 text-gray-600' : 'bg-white/40 border-gray-200/50 text-gray-400'}`}>
-              <Layers size={13} className={selectedPart ? 'text-blue-600' : 'text-gray-400'} />
-              {!selectedStore ? <span className="flex-1 text-left text-gray-400 truncate">영업점을 먼저 선택</span> : partsLoading ? <span className="flex-1 text-left text-gray-400 truncate">불러오는 중...</span> : storeParts.length === 0 ? <span className="flex-1 text-left text-gray-400 truncate">설정된 파트 없음</span> : selectedPart ? <span className="font-semibold flex-1 text-left truncate">{selectedPart.name}<span className="text-blue-400 ml-1.5 text-[10px]">{selectedPart.categories.length}개 조코드</span></span> : <span className="flex-1 text-left text-gray-400 truncate">파트를 선택하세요</span>}
-              {selectedPart && <span onClick={(e) => { e.stopPropagation(); setSelectedPartId(null); setShowPartPanel(false); }} className="p-0.5 rounded-full hover:bg-blue-200/50 smooth-transition"><X size={12} className="text-blue-600" /></span>}
+            <button onClick={() => { if (!selectedStore || partsLoading || storeParts.length === 0) return; setShowPartPanel(prev => !prev); setShowStorePanel(false); }} className={`w-full flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-transparent smooth-transition active:scale-95 shadow-sm ${selectedPart ? 'bg-blue-600 text-white' : selectedStore && storeParts.length > 0 ? 'bg-slate-500 text-white' : 'bg-slate-300 text-slate-500 shadow-none'}`}>
+              <Layers size={13} className={selectedPart || (selectedStore && storeParts.length > 0) ? 'text-white' : 'text-slate-400'} />
+              {!selectedStore ? <span className="flex-1 text-left truncate">영업점을 먼저 선택</span> : partsLoading ? <span className="flex-1 text-left truncate">불러오는 중...</span> : storeParts.length === 0 ? <span className="flex-1 text-left truncate">설정된 파트 없음</span> : selectedPart ? <span className="flex-1 text-left truncate">{selectedPart.name}<span className="text-blue-100 ml-1.5 text-[10px] bg-blue-800/50 px-1 py-0.5 rounded-md">{selectedPart.categories.length}개 조코드</span></span> : <span className="flex-1 text-left truncate">파트를 선택하세요</span>}
+              {selectedPart && <span onClick={(e) => { e.stopPropagation(); setSelectedPartId(null); setShowPartPanel(false); }} className="p-0.5 rounded-full hover:bg-blue-800/50 smooth-transition"><X size={12} className="text-white" /></span>}
               {selectedStore && storeParts.length > 0 && <ChevronDown size={12} className={`transition-transform shrink-0 ${showPartPanel ? 'rotate-180' : ''}`} />}
             </button>
             <AnimatePresence>
               {showPartPanel && storeParts.length > 0 && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="glass-panel absolute left-0 right-0 top-full mt-1 bg-white/95 rounded-2xl z-[60] overflow-hidden" style={{ width: 'calc(100vw - 24px)', maxWidth: 'calc(100vw - 24px)' }}>
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute left-0 right-0 top-full mt-1 bg-white/95 backdrop-blur-[40px] shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-gray-200 rounded-2xl z-[150] overflow-hidden" style={{ width: 'calc(100vw - 24px)', maxWidth: 'calc(100vw - 24px)' }}>
                   <div className="max-h-[300px] overflow-y-auto py-1">
                     {storeParts.map((part, idx) => {
                       const isSelected = selectedPartId === part.id;
                       return (
-                        <button key={part.id} onClick={() => { setSelectedPartId(part.id); setShowPartPanel(false); }} className={`w-full flex items-center gap-3 px-4 py-3 text-left smooth-transition ${isSelected ? 'bg-blue-50/80' : 'hover:bg-gray-50/50'}`}>
-                          <Layers size={12} className={isSelected ? 'text-blue-500' : 'text-gray-300'} /><span className={`font-mono text-xs w-7 shrink-0 ${isSelected ? 'text-blue-500' : 'text-gray-400'}`}>{String(idx + 1).padStart(3, '0')}</span><span className={`text-sm flex-1 ${isSelected ? 'text-blue-800 font-semibold' : 'text-gray-700'}`}>{part.name}</span><span className={`text-[10px] shrink-0 ${isSelected ? 'text-blue-500' : 'text-gray-400'}`}>{part.categories.length}개</span>{isSelected && <div className="w-2 h-2 bg-blue-500 rounded-full shrink-0 shadow-sm" />}
+                        <button key={part.id} onClick={() => { setSelectedPartId(part.id); setShowPartPanel(false); }} className={`w-full flex items-center gap-3 px-4 py-3 text-left font-bold smooth-transition ${isSelected ? 'bg-blue-100 text-blue-900' : 'hover:bg-gray-100 text-gray-800'}`}>
+                          <Layers size={12} className={isSelected ? 'text-blue-600' : 'text-gray-400'} /><span className={`font-mono text-xs w-7 shrink-0 ${isSelected ? 'text-blue-600' : 'text-gray-500'}`}>{String(idx + 1).padStart(3, '0')}</span><span className="text-sm flex-1">{part.name}</span><span className={`text-[10px] shrink-0 ${isSelected ? 'text-blue-600 bg-blue-200 px-1.5 py-0.5 rounded-md' : 'text-gray-500'}`}>{part.categories.length}개</span>{isSelected && <div className="w-2 h-2 bg-blue-600 rounded-full shrink-0 shadow-sm" />}
                         </button>
                       );
                     })}
@@ -155,26 +161,25 @@ export const MobileView: React.FC<MobileViewProps> = ({
           <button
             onClick={async () => {
               if (selectedStore && hasData) {
-                // 서가버튼 클릭 시 최신 리스트 조회 후 순차적으로 이전 리스트도 조회되게 합니다 (await 필수)
                 if (bookTableRef.current) await bookTableRef.current.fetchAllShelves();
                 if (prevTableRef.current) await prevTableRef.current.fetchAllShelves();
               }
             }}
             disabled={!selectedStore || !hasData}
-            className={`flex items-center justify-center gap-1 w-[52px] py-1.5 rounded-xl text-xs border smooth-transition active:scale-95 ${selectedStore && hasData ? 'bg-amber-50/90 border-amber-200 text-amber-700 shadow-sm' : 'bg-white/40 border-gray-200/50 text-gray-400'}`}
+            className={`flex items-center justify-center gap-1 w-[52px] py-1.5 rounded-xl text-xs font-bold border border-transparent smooth-transition active:scale-95 shadow-sm ${selectedStore && hasData ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-slate-300 text-slate-500 shadow-none'}`}
           >
             <BookOpen size={13} />
-            <span className="text-[10px] font-bold">서가</span>
+            <span className="text-[10px]">서가</span>
           </button>
         </div>
 
         <div className="flex items-center gap-2 px-3 py-1.5">
-          <select value={groupCode} onChange={(e) => handleGroupCodeChange(e.target.value)} className="flex-1 glass-panel bg-white/50 border border-gray-200 rounded-xl px-2 py-1.5 text-sm min-w-0 smooth-transition focus:ring-2 focus:ring-blue-400/50 outline-none">
+          <select value={groupCode} onChange={(e) => handleGroupCodeChange(e.target.value)} className="flex-1 glass-panel bg-white/80 border border-gray-300 rounded-xl px-2 py-1.5 text-sm font-bold text-gray-900 min-w-0 smooth-transition focus:ring-2 focus:ring-blue-500 outline-none">
             {availableCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
           </select>
           <div className="flex items-center gap-1 shrink-0">
-            <span className="text-xs text-gray-500 font-semibold">Top</span>
-            <input type="number" value={limit} onChange={(e) => setLimit(Number(e.target.value))} className="glass-panel bg-white/50 border border-gray-200 rounded-xl w-12 text-center py-1.5 text-sm smooth-transition focus:ring-2 focus:ring-blue-400/50 outline-none" min={1} max={50} />
+            <span className="text-xs text-gray-700 font-bold">Top</span>
+            <input type="number" value={limit} onChange={(e) => setLimit(Number(e.target.value))} className="glass-panel bg-white/80 border border-gray-300 rounded-xl w-12 text-center py-1.5 text-sm font-bold text-gray-900 smooth-transition focus:ring-2 focus:ring-blue-500 outline-none" min={1} max={50} />
           </div>
         </div>
       </div>
@@ -182,27 +187,27 @@ export const MobileView: React.FC<MobileViewProps> = ({
       <div className="flex-1 overflow-auto p-3">
         {cloudLoading && !hasData ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-16 h-16 glass-panel bg-emerald-100/50 rounded-2xl flex items-center justify-center mb-4"><RefreshCw size={28} className="text-emerald-500 animate-spin" /></div><p className="text-gray-600 text-sm mb-1 font-semibold">클라우드에서 불러오는 중...</p>
+            <div className="w-16 h-16 glass-panel bg-emerald-100 border border-emerald-200 rounded-2xl flex items-center justify-center mb-4 shadow-sm"><RefreshCw size={28} className="text-emerald-600 animate-spin" /></div><p className="text-emerald-800 text-sm mb-1 font-bold">클라우드에서 불러오는 중...</p>
           </div>
         ) : !hasData ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-16 h-16 glass-panel bg-gray-200/50 rounded-2xl flex items-center justify-center mb-4"><FileSpreadsheet size={28} className="text-gray-400" /></div><p className="text-gray-500 text-sm mb-1">클라우드에 업로드된 파일이 없습니다</p><button onClick={onRefreshCloud} className="mt-4 flex items-center gap-2 px-4 py-2 bg-emerald-600/90 text-white rounded-xl text-sm font-semibold smooth-transition active:scale-95 shadow-md"><RefreshCw size={14} /> 다시 시도</button>
+            <div className="w-16 h-16 glass-panel bg-gray-100 border border-gray-200 rounded-2xl flex items-center justify-center mb-4 shadow-sm"><FileSpreadsheet size={28} className="text-gray-500" /></div><p className="text-gray-800 text-sm mb-1 font-bold">클라우드에 업로드된 파일이 없습니다</p><button onClick={onRefreshCloud} className="mt-4 flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold smooth-transition active:scale-95 shadow-md hover:bg-emerald-700"><RefreshCw size={14} /> 다시 시도</button>
           </div>
         ) : (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-            <div className="glass-panel rounded-2xl overflow-hidden shadow-md bg-white/80">
-              <div className="text-center border-b-2 border-black/80 py-2 bg-white/50">
+            <div className="glass-panel rounded-2xl overflow-hidden shadow-md bg-white/90">
+              <div className="text-center border-b-2 border-gray-800 py-2 bg-gray-50">
                 <h3 className="text-sm font-bold text-gray-900">{title || '이번주 데이터 없음'}</h3>
-                <p className="text-[11px] text-gray-500 mt-0.5 font-semibold">{selectedPart && selectedPart.name !== '기본' && <span className="text-emerald-600 mr-1">[{selectedPart.name}]</span>}{groupCode} 분야</p>
+                <p className="text-[11px] text-gray-600 mt-0.5 font-bold">{selectedPart && selectedPart.name !== '기본' && <span className="text-emerald-600 mr-1">[{selectedPart.name}]</span>}{groupCode} 분야</p>
               </div>
-              {currentList.length > 0 ? <BookTable ref={bookTableRef} books={currentList} storeCode={selectedStore?.code} storeName={selectedStore?.name} showShelfRow /> : <div className="py-8 text-center text-gray-400 text-xs">데이터 없음</div>}
+              {currentList.length > 0 ? <BookTable ref={bookTableRef} books={currentList} storeCode={selectedStore?.code} storeName={selectedStore?.name} showShelfRow /> : <div className="py-8 text-center text-gray-400 font-bold text-xs">데이터 없음</div>}
             </div>
 
-            <div className="glass-panel rounded-2xl overflow-hidden shadow-md bg-white/80">
-              <div className="text-center border-b border-black/80 py-2 bg-white/50">
+            <div className="glass-panel rounded-2xl overflow-hidden shadow-md bg-white/90">
+              <div className="text-center border-b border-gray-800 py-2 bg-gray-50">
                 <h3 className="text-sm font-bold text-gray-900">{lastWeekTitle || '지난주 데이터 없음'}</h3>
               </div>
-              {pastList.length > 0 ? <BookTable ref={prevTableRef} books={pastList} storeCode={selectedStore?.code} storeName={selectedStore?.name} showShelfRow /> : <div className="py-8 text-center text-gray-400 text-xs">데이터 없음</div>}
+              {pastList.length > 0 ? <BookTable ref={prevTableRef} books={pastList} storeCode={selectedStore?.code} storeName={selectedStore?.name} showShelfRow /> : <div className="py-8 text-center text-gray-400 font-bold text-xs">데이터 없음</div>}
             </div>
             <div className="h-4" />
           </motion.div>

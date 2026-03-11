@@ -117,13 +117,13 @@ function PasswordDialog({ onConfirm, onCancel, title }: {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="glass-panel bg-white/90 rounded-2xl p-5 w-[320px]" 
+        className="bg-white shadow-[0_20px_60px_rgba(0,0,0,0.2)] rounded-2xl p-5 w-[320px]" 
         onClick={e => e.stopPropagation()} 
         data-no-drag
       >
         <div className="flex items-center gap-2 mb-4">
-          <Lock size={16} className="text-gray-500" />
-          <h3 className="font-bold text-sm text-gray-800">{title}</h3>
+          <Lock size={16} className="text-gray-700" />
+          <h3 className="font-bold text-sm text-gray-900">{title}</h3>
         </div>
         <input
           ref={inputRef}
@@ -132,14 +132,14 @@ function PasswordDialog({ onConfirm, onCancel, title }: {
           onChange={e => setPw(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && pw && onConfirm(pw)}
           placeholder="암호를 입력하세요"
-          className="w-full border border-gray-200/50 rounded-xl px-3 py-2 text-sm mb-3 outline-none focus:ring-2 focus:ring-blue-300 bg-white/50"
+          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-gray-900 mb-3 outline-none focus:border-blue-500 bg-gray-50 placeholder-gray-400"
         />
         <div className="flex justify-end gap-2">
-          <button onClick={onCancel} className="px-4 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-lg smooth-transition active:scale-95">취소</button>
+          <button onClick={onCancel} className="px-4 py-1.5 text-xs font-bold bg-slate-600 hover:bg-slate-700 text-white rounded-lg smooth-transition active:scale-95">취소</button>
           <button
             onClick={() => pw && onConfirm(pw)}
             disabled={!pw}
-            className="px-4 py-1.5 text-xs bg-blue-600/90 backdrop-blur-sm text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 smooth-transition active:scale-95"
+            className="px-4 py-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-40 smooth-transition active:scale-95 shadow-sm"
           >확인</button>
         </div>
       </motion.div>
@@ -165,7 +165,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       type="button"
       onClick={onClick}
       title={title}
-      className={`p-1 rounded smooth-transition active:scale-95 ${active ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200/50'}`}
+      className={`p-1 rounded smooth-transition active:scale-95 font-bold ${active ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
     >
       {children}
     </button>
@@ -186,7 +186,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-white/80 backdrop-blur-sm rounded-t-lg relative border-b border-gray-100/50">
+    <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-gray-50 rounded-t-lg relative border-b border-gray-200">
       <Btn onClick={() => editor.chain().focus().undo().run()} title="실행취소"><Undo2 size={14} /></Btn>
       <Btn onClick={() => editor.chain().focus().redo().run()} title="다시실행"><Redo2 size={14} /></Btn>
       <div className="w-px h-4 bg-gray-300 mx-1" />
@@ -195,10 +195,10 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       <Btn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="제목3"><Heading3 size={14} /></Btn>
       <div className="w-px h-4 bg-gray-300 mx-1" />
       
-      <div className="flex items-center border border-gray-200/50 bg-white/80 rounded shadow-sm overflow-hidden h-[26px]">
-        <button type="button" onClick={() => { closeAllPopups(); const current = editor.getAttributes('textStyle').fontSize || '16px'; const num = parseInt(current, 10); editor.chain().focus().setFontSize(`${Math.max(10, num - 2)}px`).run(); }} title="글자 작게 (-2px)" className="px-2.5 h-full text-gray-600 hover:bg-gray-200 font-bold text-[11px] flex items-center justify-center smooth-transition active:bg-gray-300">A-</button>
+      <div className="flex items-center border border-gray-300 bg-white rounded shadow-sm overflow-hidden h-[26px]">
+        <button type="button" onClick={() => { closeAllPopups(); const current = editor.getAttributes('textStyle').fontSize || '16px'; const num = parseInt(current, 10); editor.chain().focus().setFontSize(`${Math.max(10, num - 2)}px`).run(); }} title="글자 작게 (-2px)" className="px-2.5 h-full text-gray-700 hover:bg-gray-100 font-bold text-[11px] flex items-center justify-center smooth-transition active:bg-gray-200">A-</button>
         <div className="w-px h-4 bg-gray-300" />
-        <button type="button" onClick={() => { closeAllPopups(); const current = editor.getAttributes('textStyle').fontSize || '16px'; const num = parseInt(current, 10); editor.chain().focus().setFontSize(`${Math.min(60, num + 2)}px`).run(); }} title="글자 크게 (+2px)" className="px-2.5 h-full text-gray-600 hover:bg-gray-200 font-bold text-[14px] flex items-center justify-center smooth-transition active:bg-gray-300">A+</button>
+        <button type="button" onClick={() => { closeAllPopups(); const current = editor.getAttributes('textStyle').fontSize || '16px'; const num = parseInt(current, 10); editor.chain().focus().setFontSize(`${Math.min(60, num + 2)}px`).run(); }} title="글자 크게 (+2px)" className="px-2.5 h-full text-gray-700 hover:bg-gray-100 font-bold text-[14px] flex items-center justify-center smooth-transition active:bg-gray-200">A+</button>
       </div>
 
       <div className="w-px h-4 bg-gray-300 mx-1" />
@@ -213,7 +213,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
           <div className="flex flex-col items-center"><span className="text-[10px] font-bold leading-none">A</span><div className="w-3 h-1 rounded-sm mt-px" style={{ backgroundColor: editor.getAttributes('textStyle').color || '#000' }} /></div>
         </Btn>
         {showColor && (
-          <div className="glass-panel absolute top-full left-0 mt-1 z-[100] bg-white/90 rounded-xl p-2 grid grid-cols-5 gap-1.5 w-[140px]">
+          <div className="absolute top-full left-0 mt-1 z-[100] bg-white border border-gray-200 rounded-xl p-2 grid grid-cols-5 gap-1.5 w-[140px] shadow-lg">
             {COLORS.map(c => <button key={c} className="w-5 h-5 rounded-full border border-gray-200 hover:scale-125 smooth-transition" style={{ backgroundColor: c }} onClick={() => { editor.chain().focus().setColor(c).run(); setShowColor(false); }} />)}
           </div>
         )}
@@ -222,7 +222,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       <div className="relative">
         <Btn active={editor.isActive('highlight')} onClick={() => { closeAllPopups(); setShowHighlight(!showHighlight); }} title="형광펜"><Highlighter size={14} /></Btn>
         {showHighlight && (
-          <div className="glass-panel absolute top-full left-0 mt-1 z-[100] bg-white/90 rounded-xl p-2 grid grid-cols-4 gap-1.5 w-[120px]">
+          <div className="absolute top-full left-0 mt-1 z-[100] bg-white border border-gray-200 rounded-xl p-2 grid grid-cols-4 gap-1.5 w-[120px] shadow-lg">
             {['#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff', '#fed7aa'].map(c => <button key={c} className="w-5 h-5 rounded-full border border-gray-200 hover:scale-125 smooth-transition" style={{ backgroundColor: c }} onClick={() => { editor.chain().focus().toggleHighlight({ color: c }).run(); setShowHighlight(false); }} />)}
             <button className="w-5 h-5 rounded-full border border-gray-300 text-[9px] hover:scale-125 smooth-transition flex items-center justify-center font-bold text-gray-500" onClick={() => { editor.chain().focus().unsetHighlight().run(); setShowHighlight(false); }}>X</button>
           </div>
@@ -260,7 +260,7 @@ function WriteDialog({ initialData, onSave, onCancel, saving }: {
     ],
     content: initialData?.content || '<p></p>',
     editorProps: {
-      attributes: { class: 'prose prose-sm max-w-none focus:outline-none min-h-[350px] px-5 py-4 bg-white/80 rounded-b-lg' },
+      attributes: { class: 'prose prose-sm max-w-none focus:outline-none min-h-[350px] px-5 py-4 bg-white rounded-b-lg text-gray-900 font-medium' },
     },
   });
 
@@ -271,33 +271,33 @@ function WriteDialog({ initialData, onSave, onCancel, saving }: {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="glass-panel bg-white/95 backdrop-blur-2xl rounded-2xl w-[90vw] max-w-[750px] max-h-[90vh] flex flex-col overflow-hidden shadow-[0_20px_40px_rgba(0,0,0,0.15)]"
+        className="bg-white rounded-2xl w-[90vw] max-w-[750px] max-h-[90vh] flex flex-col overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.25)] border border-gray-200"
         onClick={e => e.stopPropagation()}
         data-no-drag
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200/50 bg-white/80">
-          <h2 className="font-bold text-base text-gray-800">{initialData ? '게시글 수정' : '게시글 작성'}</h2>
-          <button onClick={onCancel} className="p-1.5 hover:bg-gray-200/50 rounded-full smooth-transition"><X size={18} /></button>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-white">
+          <h2 className="font-bold text-base text-gray-900">{initialData ? '게시글 수정' : '게시글 작성'}</h2>
+          <button onClick={onCancel} className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-full smooth-transition"><X size={18} /></button>
         </div>
 
-        <div className="px-5 pt-4 bg-white/80">
+        <div className="px-5 pt-4 bg-white">
           <input
             type="text"
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="제목을 입력하세요"
-            className="w-full text-lg font-semibold border-b border-gray-200/50 pb-2 outline-none focus:border-blue-500 bg-transparent placeholder-gray-400 smooth-transition"
+            className="w-full text-lg font-bold border-b border-gray-200 text-gray-900 pb-2 outline-none focus:border-blue-500 bg-transparent placeholder-gray-400 smooth-transition"
           />
         </div>
 
-        <div className="flex flex-col flex-1 mx-5 mt-4 mb-4 border border-gray-200/50 rounded-xl min-h-0 bg-white/80 shadow-inner">
+        <div className="flex flex-col flex-1 mx-5 mt-4 mb-4 border border-gray-200 rounded-xl min-h-0 bg-white shadow-sm overflow-hidden">
           <div className="shrink-0"><EditorToolbar editor={editor} /></div>
           <div className="flex-1 overflow-auto custom-scrollbar"><EditorContent editor={editor} /></div>
         </div>
 
-        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200/50 bg-white/80 shrink-0">
-          <button onClick={onCancel} className="px-5 py-2 text-sm text-gray-600 hover:bg-gray-200/80 rounded-xl smooth-transition active:scale-95 font-medium">취소</button>
-          <button onClick={() => { if (!title.trim()) { alert('제목을 입력해주세요.'); return; } if (!editor?.getHTML() || editor.isEmpty) { alert('내용을 입력해주세요.'); return; } onSave(title.trim(), editor.getHTML()); }} disabled={saving || !title.trim()} className="px-6 py-2 text-sm bg-blue-600/90 backdrop-blur-sm text-white rounded-xl hover:bg-blue-700 disabled:opacity-40 flex items-center gap-1.5 font-bold smooth-transition active:scale-95">
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-100 bg-white shrink-0">
+          <button onClick={onCancel} className="px-5 py-2 text-sm font-bold bg-slate-600 text-white hover:bg-slate-700 rounded-xl smooth-transition active:scale-95">취소</button>
+          <button onClick={() => { if (!title.trim()) { alert('제목을 입력해주세요.'); return; } if (!editor?.getHTML() || editor.isEmpty) { alert('내용을 입력해주세요.'); return; } onSave(title.trim(), editor.getHTML()); }} disabled={saving || !title.trim()} className="px-6 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl disabled:opacity-40 flex items-center gap-1.5 font-bold smooth-transition active:scale-95 shadow-sm">
             {saving && <Loader2 size={14} className="animate-spin" />} 저장
           </button>
         </div>
@@ -325,32 +325,32 @@ function ViewDialog({ notice, onClose, onEdit, onDelete }: {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="glass-panel bg-white/95 backdrop-blur-2xl rounded-2xl w-[90vw] max-w-[700px] max-h-[85vh] flex flex-col overflow-hidden shadow-[0_20px_40px_rgba(0,0,0,0.15)]"
+        className="bg-white rounded-2xl w-[90vw] max-w-[700px] max-h-[85vh] flex flex-col overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.25)] border border-gray-200"
         onClick={e => e.stopPropagation()}
         data-no-drag
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200/50 bg-white/80">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-white">
           <div className="flex-1 min-w-0 pr-4">
-            <h2 className="font-bold text-lg text-gray-800 truncate mb-1">{notice.title}</h2>
-            <div className="text-xs text-gray-500">
+            <h2 className="font-bold text-lg text-gray-900 truncate mb-1">{notice.title}</h2>
+            <div className="text-xs font-bold text-gray-500">
               {formatDate(notice.createdAt)}
               {notice.updatedAt && <span className="ml-2 pl-2 border-l border-gray-300">수정됨: {formatDate(notice.updatedAt)}</span>}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button onClick={onEdit} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-indigo-50/80 text-indigo-600 hover:bg-indigo-100 rounded-xl border border-indigo-200/50 smooth-transition active:scale-95 font-medium">
+            <button onClick={onEdit} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl smooth-transition active:scale-95 font-bold shadow-sm">
               <Pencil size={13} />수정
             </button>
-            <button onClick={onDelete} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-50/80 text-red-600 hover:bg-red-100 rounded-xl border border-red-200/50 smooth-transition active:scale-95 font-medium">
+            <button onClick={onDelete} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-rose-600 text-white hover:bg-rose-700 rounded-xl smooth-transition active:scale-95 font-bold shadow-sm">
               <Trash2 size={13} />삭제
             </button>
             <div className="w-px h-4 bg-gray-300 mx-1"></div>
-            <button onClick={onClose} className="p-1.5 hover:bg-gray-200/80 rounded-full smooth-transition"><X size={18} /></button>
+            <button onClick={onClose} className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-full smooth-transition"><X size={18} /></button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto px-6 py-6 custom-scrollbar bg-white/80">
-          <div className="prose prose-sm max-w-none notice-content" dangerouslySetInnerHTML={{ __html: notice.content }} />
+        <div className="flex-1 overflow-auto px-6 py-6 custom-scrollbar bg-white">
+          <div className="prose prose-sm max-w-none notice-content text-gray-900 font-medium" dangerouslySetInnerHTML={{ __html: notice.content }} />
         </div>
       </motion.div>
     </div>,
@@ -458,13 +458,14 @@ export const InlineNoticePanel: React.FC<InlineNoticePanelProps> = ({ className 
   return (
     <>
       <div className={`relative flex ${className || ''}`} ref={popoverRef} data-no-drag>
+        {/* 솔리드 컬러 톤의 공지사항 버튼 */}
         <button
           onClick={() => {
             const next = !showPopover;
             setShowPopover(next);
             if (next) load();
           }}
-          className="flex flex-col items-center justify-center bg-red-50/80 hover:bg-red-100 text-red-700 border border-red-200/50 w-[72px] h-[60px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md"
+          className="flex flex-col items-center justify-center bg-rose-600 hover:bg-rose-700 text-white w-[72px] h-[60px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md"
         >
           <Bell size={22} className="mb-1" />
           <span className="text-[11px] font-bold whitespace-nowrap">공지사항</span>
@@ -477,29 +478,29 @@ export const InlineNoticePanel: React.FC<InlineNoticePanelProps> = ({ className 
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-[300px] bg-white/95 backdrop-blur-2xl shadow-[0_20px_40px_rgba(0,0,0,0.15)] rounded-2xl border border-gray-200 z-[60] overflow-hidden flex flex-col"
+              className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-[300px] bg-white/95 backdrop-blur-[40px] shadow-[0_20px_60px_rgba(0,0,0,0.3)] rounded-2xl border border-gray-200 z-[80] overflow-hidden flex flex-col"
             >
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100/50 bg-slate-50/50">
-                <span className="text-xs font-bold text-slate-700">사내 공지사항</span>
-                <button onClick={handleWriteClick} className="flex items-center gap-1 px-2.5 py-1 text-[10px] bg-red-50/80 text-red-600 hover:bg-red-100 rounded-lg smooth-transition active:scale-95 font-semibold border border-red-100/50">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+                <span className="text-xs font-bold text-gray-900">사내 공지사항</span>
+                <button onClick={handleWriteClick} className="flex items-center gap-1 px-2.5 py-1 text-[10px] bg-blue-600 text-white hover:bg-blue-700 rounded-lg smooth-transition active:scale-95 font-bold shadow-sm">
                   <Plus size={12} /> 작성
                 </button>
               </div>
               
               <div className="max-h-[300px] overflow-y-auto custom-scrollbar p-1.5">
                 {loading ? (
-                  <div className="py-6 text-center text-slate-400 text-xs">로딩...</div>
+                  <div className="py-6 text-center text-gray-500 font-bold text-xs">로딩...</div>
                 ) : notices.length === 0 ? (
-                  <div className="py-6 text-center text-slate-400 text-xs">등록된 공지가 없습니다</div>
+                  <div className="py-6 text-center text-gray-400 font-bold text-xs">등록된 공지가 없습니다</div>
                 ) : (
                   notices.map(n => (
                     <button
                       key={n.id}
                       onClick={() => { setViewNotice(n); setShowPopover(false); }}
-                      className="w-full text-left px-3 py-2.5 flex flex-col gap-1 hover:bg-white/60 rounded-xl smooth-transition active:scale-95 border-b border-slate-100/30 last:border-0"
+                      className="w-full text-left px-3 py-2.5 flex flex-col gap-1 hover:bg-gray-100 rounded-xl smooth-transition active:scale-95 border-b border-gray-100/50 last:border-0"
                     >
-                      <div className="text-[11px] font-semibold text-slate-700 truncate w-full">{n.title}</div>
-                      <div className="text-[9px] text-slate-400">{formatDate(n.createdAt)}</div>
+                      <div className="text-[11px] font-bold text-gray-900 truncate w-full">{n.title}</div>
+                      <div className="text-[9px] font-bold text-gray-500">{formatDate(n.createdAt)}</div>
                     </button>
                   ))
                 )}
@@ -523,11 +524,11 @@ export const InlineNoticePanel: React.FC<InlineNoticePanelProps> = ({ className 
         .notice-content ul { list-style: disc; padding-left: 1.5em; margin: 0.3em 0; }
         .notice-content ol { list-style: decimal; padding-left: 1.5em; margin: 0.3em 0; }
         .notice-content table { border-collapse: collapse; width: 100%; margin: 0.5em 0; }
-        .notice-content th, .notice-content td { border: 1px solid #d1d5db; padding: 8px 12px; text-align: left; }
+        .notice-content th, .notice-content td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
         .notice-content th { background: #f3f4f6; font-weight: 600; }
         .notice-content img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         .notice-content mark { padding: 2px 4px; border-radius: 4px; }
-        .notice-content blockquote { border-left: 4px solid #9ca3af; padding-left: 1em; color: #4b5563; margin: 0.5em 0; font-style: italic; background: #f9fafb; padding: 10px; border-radius: 0 8px 8px 0; }
+        .notice-content blockquote { border-left: 4px solid #94a3b8; padding-left: 1em; color: #475569; margin: 0.5em 0; font-style: italic; background: #f8fafc; padding: 10px; border-radius: 0 8px 8px 0; }
 
         .tiptap { min-height: 350px; }
         .tiptap:focus { outline: none; }
@@ -538,11 +539,11 @@ export const InlineNoticePanel: React.FC<InlineNoticePanelProps> = ({ className 
         .tiptap ul { list-style: disc; padding-left: 1.5em; margin: 0.3em 0; }
         .tiptap ol { list-style: decimal; padding-left: 1.5em; margin: 0.3em 0; }
         .tiptap table { border-collapse: collapse; width: 100%; margin: 0.5em 0; }
-        .tiptap th, .tiptap td { border: 1px solid #d1d5db; padding: 8px 12px; text-align: left; min-width: 50px; position: relative; }
-        .tiptap th { background: #f3f4f6; font-weight: 600; }
+        .tiptap th, .tiptap td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; min-width: 50px; position: relative; }
+        .tiptap th { background: #f3f4f6; font-weight: 600; color: #1f2937; }
         .tiptap img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
         .tiptap mark { padding: 2px 4px; border-radius: 4px; }
-        .tiptap blockquote { border-left: 4px solid #9ca3af; padding-left: 1em; color: #4b5563; margin: 0.5em 0; font-style: italic; background: #f9fafb; padding: 10px; border-radius: 0 8px 8px 0; }
+        .tiptap blockquote { border-left: 4px solid #94a3b8; padding-left: 1em; color: #475569; margin: 0.5em 0; font-style: italic; background: #f8fafc; padding: 10px; border-radius: 0 8px 8px 0; }
         .tiptap .selectedCell { background: #dbeafe; }
         
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
