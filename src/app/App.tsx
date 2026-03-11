@@ -22,104 +22,6 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
-// ==========================================
-// WebGL Liquid Glass Background
-// ==========================================
-const LiquidBackground = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const gl = canvas.getContext('webgl');
-    if (!gl) return;
-
-    const compileShader = (type: number, source: string) => {
-      const shader = gl.createShader(type);
-      if (!shader) return null;
-      gl.shaderSource(shader, source);
-      gl.compileShader(shader);
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error(gl.getShaderInfoLog(shader));
-        gl.deleteShader(shader);
-        return null;
-      }
-      return shader;
-    };
-
-    const vsSource = `
-      attribute vec2 position;
-      void main() { gl_Position = vec4(position, 0.0, 1.0); }
-    `;
-
-    const fsSource = `
-      precision mediump float;
-      uniform vec2 u_resolution;
-      uniform float u_time;
-
-      void main() {
-        vec2 uv = gl_FragCoord.xy / u_resolution.xy;
-        vec2 p = uv * 2.0 - 1.0;
-        p.x *= u_resolution.x / u_resolution.y;
-
-        float t = u_time * 0.15;
-        vec2 offset = vec2(
-            sin(p.y * 2.0 + t) * 0.3,
-            cos(p.x * 2.0 + t * 0.8) * 0.3
-        );
-
-        vec3 color1 = vec3(0.92, 0.95, 1.0);  // Ice Blue
-        vec3 color2 = vec3(0.96, 0.93, 1.0);  // Soft Purple
-        vec3 color3 = vec3(0.90, 0.98, 0.96); // Mint Green
-
-        float mixVal1 = sin(uv.x * 4.0 + offset.x * 8.0 + t) * 0.5 + 0.5;
-        float mixVal2 = cos(uv.y * 3.0 + offset.y * 8.0 - t) * 0.5 + 0.5;
-
-        vec3 finalColor = mix(color1, color2, mixVal1);
-        finalColor = mix(finalColor, color3, mixVal2);
-
-        gl_FragColor = vec4(finalColor, 1.0);
-      }
-    `;
-
-    const vertexShader = compileShader(gl.VERTEX_SHADER, vsSource)!;
-    const fragmentShader = compileShader(gl.FRAGMENT_SHADER, fsSource)!;
-    const program = gl.createProgram()!;
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
-    gl.linkProgram(program);
-    gl.useProgram(program);
-
-    const positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
-
-    const positionLocation = gl.getAttribLocation(program, 'position');
-    gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-
-    const resolutionLocation = gl.getUniformLocation(program, 'u_resolution');
-    const timeLocation = gl.getUniformLocation(program, 'u_time');
-
-    const render = (time: number) => {
-      if (!canvas) return;
-      if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        gl.viewport(0, 0, canvas.width, canvas.height);
-      }
-      gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
-      gl.uniform1f(timeLocation, time * 0.001);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
-      requestAnimationFrame(render);
-    };
-    const animId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(animId);
-  }, []);
-
-  return <canvas ref={canvasRef} className="fixed inset-0 w-full h-full pointer-events-none -z-10" />;
-};
-
 export default function App() {
   const [thisWeekData, setThisWeekData] = useState<ProcessedData>({ title: "", books: [] });
   const [lastWeekData, setLastWeekData] = useState<ProcessedData>({ title: "", books: [] });
@@ -245,8 +147,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-    <div className="h-screen w-screen relative overflow-hidden flex flex-col font-sans main-desktop-wrapper text-slate-800 bg-transparent">
-      <LiquidBackground />
+    <div className="h-screen w-screen relative overflow-hidden flex flex-col font-sans main-desktop-wrapper">
       <Toaster position="top-center" />
       
       <div className="z-50 relative topbar-wrapper">
@@ -254,7 +155,7 @@ export default function App() {
       </div>
 
       <div className="flex-1 relative overflow-hidden canvas-area cursor-grab active:cursor-grabbing" ref={canvasRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-        <div className="absolute top-5 left-5 z-40 glass-panel shadow-sm text-slate-700 px-4 py-2 rounded-2xl text-xs font-bold pointer-events-none canvas-hint transition-all duration-300">
+        <div className="absolute top-5 left-5 z-40 liquid-panel bg-white/60 shadow-sm text-sky-800 px-4 py-2 rounded-2xl text-xs font-bold pointer-events-none canvas-hint transition-all duration-300">
           ✨ 휠: 상하 이동 | Ctrl + 휠: 확대/축소 | 드래그: 자유 이동
         </div>
 
@@ -266,7 +167,7 @@ export default function App() {
               animate={{ opacity: 1, scale: 1, y: 0 }} 
               transition={{ type: "tween", ease: "easeOut", duration: 0.4 }}
               key={list.id} 
-              className={`list-wrapper smooth-transition hover:-translate-y-2 hover:shadow-2xl rounded-[2rem] p-2 ${printingId && printingId !== list.id ? "print:hidden" : "print:block"}`}
+              className={`list-wrapper liquid-panel bg-white/60 smooth-transition hover:-translate-y-2 hover:shadow-2xl rounded-[2rem] p-2 ${printingId && printingId !== list.id ? "print:hidden" : "print:block"}`}
             >
               <ListCard id={list.id} thisWeekBooks={thisWeekData.books} lastWeekBooks={lastWeekData.books} title={thisWeekData.title} lastWeekTitle={lastWeekData.title} onDelete={() => handleDeleteList(list.id)} onPrint={handlePrintCard} storeCode={selectedStore?.code} storeName={selectedStore?.name} availableCategories={activeCategories || undefined} categoryRanks={categoryRanks} defaultGroupCode={list.defaultGroupCode} defaultLimit={list.defaultLimit} />
             </motion.div>

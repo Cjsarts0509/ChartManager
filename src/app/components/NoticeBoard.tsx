@@ -112,31 +112,24 @@ function PasswordDialog({ onConfirm, onCancel, title }: {
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => { inputRef.current?.focus(); }, []);
   return createPortal(
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onCancel}>
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-sky-900/40 backdrop-blur-md" onClick={onCancel}>
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-2xl p-5 w-[320px] shadow-[0_20px_60px_rgba(0,0,0,0.2)]" 
-        onClick={e => e.stopPropagation()} 
-        data-no-drag
+        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+        className="liquid-panel bg-white/95 rounded-2xl p-5 w-[320px]" 
+        onClick={e => e.stopPropagation()} data-no-drag
       >
         <div className="flex items-center gap-2 mb-4">
-          <Lock size={16} className="text-gray-500" />
-          <h3 className="font-bold text-sm text-gray-800">{title}</h3>
+          <Lock size={16} className="text-indigo-600" />
+          <h3 className="font-bold text-sm text-indigo-900">{title}</h3>
         </div>
         <input
-          ref={inputRef}
-          type="password"
-          value={pw}
-          onChange={e => setPw(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && pw && onConfirm(pw)}
+          ref={inputRef} type="password" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === 'Enter' && pw && onConfirm(pw)}
           placeholder="암호를 입력하세요"
-          className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm mb-3 outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50 font-bold"
+          className="w-full border border-indigo-200 rounded-xl px-3 py-2 text-sm mb-3 outline-none focus:ring-2 focus:ring-indigo-400 bg-indigo-50 font-bold text-indigo-900"
         />
         <div className="flex justify-end gap-2">
-          <button onClick={onCancel} className="px-4 py-1.5 text-xs text-gray-600 font-bold hover:bg-gray-100 rounded-lg smooth-transition active:scale-95">취소</button>
-          <button onClick={() => pw && onConfirm(pw)} disabled={!pw} className="px-4 py-1.5 text-xs bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 disabled:opacity-40 smooth-transition active:scale-95">확인</button>
+          <button onClick={onCancel} className="liquid-btn px-4 py-1.5 text-xs bg-indigo-50 text-indigo-700 font-bold rounded-lg">취소</button>
+          <button onClick={() => pw && onConfirm(pw)} disabled={!pw} className="liquid-btn px-4 py-1.5 text-xs bg-blue-600 text-white font-bold rounded-lg disabled:opacity-40">확인</button>
         </div>
       </motion.div>
     </div>,
@@ -152,7 +145,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
   if (!editor) return null;
 
   const Btn = ({ active, onClick, children, title }: { active?: boolean; onClick: () => void; children: React.ReactNode; title?: string }) => (
-    <button type="button" onClick={onClick} title={title} className={`p-1 rounded smooth-transition active:scale-95 font-bold ${active ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}>
+    <button type="button" onClick={onClick} title={title} className={`p-1 rounded font-bold smooth-transition active:scale-95 ${active ? 'bg-sky-200 text-sky-800' : 'text-sky-700 hover:bg-sky-100'}`}>
       {children}
     </button>
   );
@@ -162,35 +155,35 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
   const closeAllPopups = () => { setShowColor(false); setShowHighlight(false); };
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-gray-50 border-b border-gray-200 rounded-t-xl relative">
+    <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-sky-50/50 border-b border-sky-100 rounded-t-xl relative">
       <Btn onClick={() => editor.chain().focus().undo().run()} title="실행취소"><Undo2 size={14} /></Btn>
       <Btn onClick={() => editor.chain().focus().redo().run()} title="다시실행"><Redo2 size={14} /></Btn>
-      <div className="w-px h-4 bg-gray-300 mx-1" />
+      <div className="w-px h-4 bg-sky-200 mx-1" />
       <Btn active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="제목1"><Heading1 size={14} /></Btn>
       <Btn active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="제목2"><Heading2 size={14} /></Btn>
       <Btn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="제목3"><Heading3 size={14} /></Btn>
-      <div className="w-px h-4 bg-gray-300 mx-1" />
+      <div className="w-px h-4 bg-sky-200 mx-1" />
       
-      <div className="flex items-center border border-gray-300 bg-white rounded shadow-sm overflow-hidden h-[26px]">
-        <button type="button" onClick={() => { closeAllPopups(); const current = editor.getAttributes('textStyle').fontSize || '16px'; const num = parseInt(current, 10); editor.chain().focus().setFontSize(`${Math.max(10, num - 2)}px`).run(); }} title="글자 작게 (-2px)" className="px-2.5 h-full text-gray-600 hover:bg-gray-100 font-bold text-[11px] flex items-center justify-center smooth-transition active:bg-gray-200">A-</button>
-        <div className="w-px h-4 bg-gray-300" />
-        <button type="button" onClick={() => { closeAllPopups(); const current = editor.getAttributes('textStyle').fontSize || '16px'; const num = parseInt(current, 10); editor.chain().focus().setFontSize(`${Math.min(60, num + 2)}px`).run(); }} title="글자 크게 (+2px)" className="px-2.5 h-full text-gray-600 hover:bg-gray-100 font-bold text-[14px] flex items-center justify-center smooth-transition active:bg-gray-200">A+</button>
+      <div className="flex items-center border border-sky-200 bg-white rounded shadow-sm overflow-hidden h-[26px]">
+        <button type="button" onClick={() => { closeAllPopups(); const current = editor.getAttributes('textStyle').fontSize || '16px'; const num = parseInt(current, 10); editor.chain().focus().setFontSize(`${Math.max(10, num - 2)}px`).run(); }} title="글자 작게 (-2px)" className="px-2.5 h-full text-sky-700 hover:bg-sky-100 font-bold text-[11px] flex items-center justify-center smooth-transition">A-</button>
+        <div className="w-px h-4 bg-sky-200" />
+        <button type="button" onClick={() => { closeAllPopups(); const current = editor.getAttributes('textStyle').fontSize || '16px'; const num = parseInt(current, 10); editor.chain().focus().setFontSize(`${Math.min(60, num + 2)}px`).run(); }} title="글자 크게 (+2px)" className="px-2.5 h-full text-sky-700 hover:bg-sky-100 font-bold text-[14px] flex items-center justify-center smooth-transition">A+</button>
       </div>
 
-      <div className="w-px h-4 bg-gray-300 mx-1" />
+      <div className="w-px h-4 bg-sky-200 mx-1" />
       <Btn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} title="굵게"><Bold size={14} /></Btn>
       <Btn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title="기울임"><Italic size={14} /></Btn>
       <Btn active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} title="밑줄"><UnderlineIcon size={14} /></Btn>
       <Btn active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()} title="취소선"><Strikethrough size={14} /></Btn>
-      <div className="w-px h-4 bg-gray-300 mx-1" />
+      <div className="w-px h-4 bg-sky-200 mx-1" />
 
       <div className="relative">
         <Btn onClick={() => { closeAllPopups(); setShowColor(!showColor); }} title="글자색">
           <div className="flex flex-col items-center"><span className="text-[10px] font-bold leading-none">A</span><div className="w-3 h-1 rounded-sm mt-px" style={{ backgroundColor: editor.getAttributes('textStyle').color || '#000' }} /></div>
         </Btn>
         {showColor && (
-          <div className="absolute top-full left-0 mt-1 z-[100] bg-white border border-gray-200 shadow-xl rounded-xl p-2 grid grid-cols-5 gap-1.5 w-[140px]">
-            {COLORS.map(c => <button key={c} className="w-5 h-5 rounded-full border border-gray-300 hover:scale-125 smooth-transition" style={{ backgroundColor: c }} onClick={() => { editor.chain().focus().setColor(c).run(); setShowColor(false); }} />)}
+          <div className="liquid-panel absolute top-full left-0 mt-1 z-[100] bg-white/90 rounded-xl p-2 grid grid-cols-5 gap-1.5 w-[140px]">
+            {COLORS.map(c => <button key={c} className="w-5 h-5 rounded-full border border-sky-200 hover:scale-125 smooth-transition" style={{ backgroundColor: c }} onClick={() => { editor.chain().focus().setColor(c).run(); setShowColor(false); }} />)}
           </div>
         )}
       </div>
@@ -198,30 +191,30 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       <div className="relative">
         <Btn active={editor.isActive('highlight')} onClick={() => { closeAllPopups(); setShowHighlight(!showHighlight); }} title="형광펜"><Highlighter size={14} /></Btn>
         {showHighlight && (
-          <div className="absolute top-full left-0 mt-1 z-[100] bg-white border border-gray-200 shadow-xl rounded-xl p-2 grid grid-cols-4 gap-1.5 w-[120px]">
-            {['#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff', '#fed7aa'].map(c => <button key={c} className="w-5 h-5 rounded-full border border-gray-300 hover:scale-125 smooth-transition" style={{ backgroundColor: c }} onClick={() => { editor.chain().focus().toggleHighlight({ color: c }).run(); setShowHighlight(false); }} />)}
-            <button className="w-5 h-5 rounded-full border border-gray-300 text-[9px] hover:scale-125 smooth-transition flex items-center justify-center font-bold text-gray-600 bg-gray-50" onClick={() => { editor.chain().focus().unsetHighlight().run(); setShowHighlight(false); }}>X</button>
+          <div className="liquid-panel absolute top-full left-0 mt-1 z-[100] bg-white/90 rounded-xl p-2 grid grid-cols-4 gap-1.5 w-[120px]">
+            {['#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff', '#fed7aa'].map(c => <button key={c} className="w-5 h-5 rounded-full border border-sky-200 hover:scale-125 smooth-transition" style={{ backgroundColor: c }} onClick={() => { editor.chain().focus().toggleHighlight({ color: c }).run(); setShowHighlight(false); }} />)}
+            <button className="w-5 h-5 rounded-full border border-sky-300 text-[9px] hover:scale-125 smooth-transition flex items-center justify-center font-bold text-sky-700 bg-sky-50" onClick={() => { editor.chain().focus().unsetHighlight().run(); setShowHighlight(false); }}>X</button>
           </div>
         )}
       </div>
 
-      <div className="w-px h-4 bg-gray-300 mx-1" />
+      <div className="w-px h-4 bg-sky-200 mx-1" />
       <Btn active={editor.isActive({ textAlign: 'left' })} onClick={() => editor.chain().focus().setTextAlign('left').run()} title="왼쪽정렬"><AlignLeft size={14} /></Btn>
       <Btn active={editor.isActive({ textAlign: 'center' })} onClick={() => editor.chain().focus().setTextAlign('center').run()} title="가운데정렬"><AlignCenter size={14} /></Btn>
       <Btn active={editor.isActive({ textAlign: 'right' })} onClick={() => editor.chain().focus().setTextAlign('right').run()} title="오른쪽정렬"><AlignRight size={14} /></Btn>
-      <div className="w-px h-4 bg-gray-300 mx-1" />
+      <div className="w-px h-4 bg-sky-200 mx-1" />
       <Btn active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()} title="목록"><List size={14} /></Btn>
       <Btn active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="번호목록"><ListOrdered size={14} /></Btn>
-      <div className="w-px h-4 bg-gray-300 mx-1" />
+      <div className="w-px h-4 bg-sky-200 mx-1" />
       <Btn onClick={addTable} title="표 삽입"><TableIcon size={14} /></Btn>
       <Btn onClick={addImage} title="이미지 삽입"><Image size={14} /></Btn>
 
       {editor.isActive('table') && (
         <div className="flex gap-1 ml-auto">
-          <button onClick={() => editor.chain().focus().addColumnAfter().run()} className="text-[10px] font-bold px-1.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 rounded smooth-transition hover:bg-blue-100">열+</button>
-          <button onClick={() => editor.chain().focus().deleteColumn().run()} className="text-[10px] font-bold px-1.5 py-0.5 bg-red-50 border border-red-200 text-red-600 rounded smooth-transition hover:bg-red-100">열-</button>
-          <button onClick={() => editor.chain().focus().addRowAfter().run()} className="text-[10px] font-bold px-1.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 rounded smooth-transition hover:bg-blue-100">행+</button>
-          <button onClick={() => editor.chain().focus().deleteRow().run()} className="text-[10px] font-bold px-1.5 py-0.5 bg-red-50 border border-red-200 text-red-600 rounded smooth-transition hover:bg-red-100">행-</button>
+          <button onClick={() => editor.chain().focus().addColumnAfter().run()} className="liquid-btn text-[10px] font-bold px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded">열+</button>
+          <button onClick={() => editor.chain().focus().deleteColumn().run()} className="liquid-btn text-[10px] font-bold px-1.5 py-0.5 bg-rose-100 text-rose-800 rounded">열-</button>
+          <button onClick={() => editor.chain().focus().addRowAfter().run()} className="liquid-btn text-[10px] font-bold px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded">행+</button>
+          <button onClick={() => editor.chain().focus().deleteRow().run()} className="liquid-btn text-[10px] font-bold px-1.5 py-0.5 bg-rose-100 text-rose-800 rounded">행-</button>
         </div>
       )}
     </div>
@@ -245,30 +238,30 @@ function WriteDialog({ initialData, onSave, onCancel, saving }: {
     ],
     content: initialData?.content || '<p></p>',
     editorProps: {
-      attributes: { class: 'prose prose-sm max-w-none focus:outline-none min-h-[350px] px-5 py-4 bg-white rounded-b-xl' },
+      attributes: { class: 'prose prose-sm max-w-none focus:outline-none min-h-[350px] px-5 py-4 bg-white/60 rounded-b-xl' },
     },
   });
 
   return createPortal(
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-sky-900/40 backdrop-blur-md">
       <motion.div initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
-        className="bg-white rounded-2xl w-[90vw] max-w-[750px] max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-gray-200"
+        className="liquid-panel bg-white/95 rounded-2xl w-[90vw] max-w-[750px] max-h-[90vh] flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()} data-no-drag
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-white">
-          <h2 className="font-bold text-base text-gray-800">{initialData ? '게시글 수정' : '게시글 작성'}</h2>
-          <button onClick={onCancel} className="p-1.5 font-bold hover:bg-gray-100 rounded-full smooth-transition"><X size={18} className="text-gray-600" /></button>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-indigo-100 bg-indigo-50/50">
+          <h2 className="font-bold text-base text-indigo-900">{initialData ? '게시글 수정' : '게시글 작성'}</h2>
+          <button onClick={onCancel} className="p-1.5 font-bold hover:bg-indigo-100 text-indigo-700 rounded-full smooth-transition"><X size={18} /></button>
         </div>
-        <div className="px-5 pt-4 bg-white">
-          <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="제목을 입력하세요" className="w-full text-lg font-bold border-b border-gray-200 pb-2 outline-none focus:border-blue-500 bg-transparent placeholder-gray-400 smooth-transition" />
+        <div className="px-5 pt-4 bg-white/50">
+          <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="제목을 입력하세요" className="w-full text-lg font-bold border-b border-sky-200 pb-2 outline-none focus:border-blue-500 bg-transparent placeholder-sky-300 text-sky-900 smooth-transition" />
         </div>
-        <div className="flex flex-col flex-1 mx-5 mt-4 mb-4 border border-gray-200 rounded-xl min-h-0 bg-white shadow-sm">
+        <div className="flex flex-col flex-1 mx-5 mt-4 mb-4 border border-sky-100 rounded-xl min-h-0 bg-white/80 shadow-inner">
           <div className="shrink-0"><EditorToolbar editor={editor} /></div>
-          <div className="flex-1 overflow-auto custom-scrollbar bg-white"><EditorContent editor={editor} /></div>
+          <div className="flex-1 overflow-auto custom-scrollbar bg-transparent"><EditorContent editor={editor} /></div>
         </div>
-        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200 bg-gray-50 shrink-0">
-          <button onClick={onCancel} className="px-5 py-2 text-sm text-gray-700 font-bold bg-white border border-gray-300 hover:bg-gray-100 rounded-xl smooth-transition active:scale-95">취소</button>
-          <button onClick={() => { if (!title.trim()) { alert('제목을 입력해주세요.'); return; } if (!editor?.getHTML() || editor.isEmpty) { alert('내용을 입력해주세요.'); return; } onSave(title.trim(), editor.getHTML()); }} disabled={saving || !title.trim()} className="px-6 py-2 text-sm bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-40 flex items-center gap-1.5 smooth-transition active:scale-95 shadow-sm">
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-indigo-100 bg-indigo-50/50 shrink-0">
+          <button onClick={onCancel} className="liquid-btn px-5 py-2 text-sm bg-indigo-100 text-indigo-800 font-bold rounded-xl">취소</button>
+          <button onClick={() => { if (!title.trim()) { alert('제목을 입력해주세요.'); return; } if (!editor?.getHTML() || editor.isEmpty) { alert('내용을 입력해주세요.'); return; } onSave(title.trim(), editor.getHTML()); }} disabled={saving || !title.trim()} className="liquid-btn px-6 py-2 text-sm bg-blue-600 text-white font-bold rounded-xl disabled:opacity-40 flex items-center gap-1.5">
             {saving && <Loader2 size={14} className="animate-spin" />} 저장
           </button>
         </div>
@@ -289,24 +282,24 @@ function ViewDialog({ notice, onClose, onEdit, onDelete }: {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-sky-900/40 backdrop-blur-md" onClick={onClose}>
       <motion.div initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
-        className="bg-white rounded-2xl w-[90vw] max-w-[700px] max-h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-gray-200"
+        className="liquid-panel bg-white/95 rounded-2xl w-[90vw] max-w-[700px] max-h-[85vh] flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()} data-no-drag
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-white">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-sky-100 bg-sky-50/50">
           <div className="flex-1 min-w-0 pr-4">
-            <h2 className="font-bold text-lg text-gray-800 truncate mb-1">{notice.title}</h2>
-            <div className="text-xs text-gray-500 font-bold">{formatDate(notice.createdAt)}{notice.updatedAt && <span className="ml-2 pl-2 border-l border-gray-300">수정됨: {formatDate(notice.updatedAt)}</span>}</div>
+            <h2 className="font-bold text-lg text-sky-900 truncate mb-1">{notice.title}</h2>
+            <div className="text-xs text-sky-600 font-bold">{formatDate(notice.createdAt)}{notice.updatedAt && <span className="ml-2 pl-2 border-l border-sky-300">수정됨: {formatDate(notice.updatedAt)}</span>}</div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button onClick={onEdit} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100 rounded-xl border border-indigo-200 smooth-transition active:scale-95"><Pencil size={13} />수정</button>
-            <button onClick={onDelete} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-50 text-red-700 font-bold hover:bg-red-100 rounded-xl border border-red-200 smooth-transition active:scale-95"><Trash2 size={13} />삭제</button>
-            <div className="w-px h-4 bg-gray-300 mx-1"></div>
-            <button onClick={onClose} className="p-1.5 font-bold hover:bg-gray-100 rounded-full smooth-transition"><X size={18} className="text-gray-600" /></button>
+            <button onClick={onEdit} className="liquid-btn flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-100 text-amber-800 font-bold rounded-xl"><Pencil size={13} />수정</button>
+            <button onClick={onDelete} className="liquid-btn flex items-center gap-1.5 px-3 py-1.5 text-xs bg-rose-100 text-rose-800 font-bold rounded-xl"><Trash2 size={13} />삭제</button>
+            <div className="w-px h-4 bg-sky-200 mx-1"></div>
+            <button onClick={onClose} className="p-1.5 font-bold hover:bg-sky-200 text-sky-700 rounded-full smooth-transition"><X size={18} /></button>
           </div>
         </div>
-        <div className="flex-1 overflow-auto px-6 py-6 custom-scrollbar bg-white">
+        <div className="flex-1 overflow-auto px-6 py-6 custom-scrollbar bg-white/60">
           <div className="prose prose-sm max-w-none notice-content" dangerouslySetInnerHTML={{ __html: notice.content }} />
         </div>
       </motion.div>
@@ -359,23 +352,23 @@ export const InlineNoticePanel: React.FC<InlineNoticePanelProps> = ({ className 
   return (
     <>
       <div className={`relative flex ${className || ''}`} ref={popoverRef} data-no-drag>
-        <button onClick={() => { const next = !showPopover; setShowPopover(next); if (next) load(); }} className="glass-panel flex flex-col items-center justify-center hover:bg-red-50 text-red-700 w-[72px] h-[60px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md">
+        <button onClick={() => { const next = !showPopover; setShowPopover(next); if (next) load(); }} className="liquid-btn flex flex-col items-center justify-center bg-rose-100/60 hover:bg-rose-200 text-rose-800 w-[72px] h-[60px] rounded-xl">
           <Bell size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap">공지사항</span>
         </button>
 
         <AnimatePresence>
           {showPopover && (
             <motion.div initial={{ opacity: 0, y: -10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }}
-              className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-[300px] bg-white shadow-2xl rounded-2xl border border-gray-200 z-[60] overflow-hidden flex flex-col"
+              className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-[300px] liquid-panel bg-white/95 rounded-2xl z-[60] overflow-hidden flex flex-col"
             >
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 bg-gray-50">
-                <span className="text-xs font-bold text-slate-800">사내 공지사항</span>
-                <button onClick={handleWriteClick} className="flex items-center gap-1 px-2.5 py-1 text-[10px] bg-white text-red-600 font-bold hover:bg-red-50 rounded-lg smooth-transition active:scale-95 border border-red-200 shadow-sm"><Plus size={12} /> 작성</button>
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-rose-100/50 bg-rose-50/50">
+                <span className="text-xs font-bold text-rose-900">사내 공지사항</span>
+                <button onClick={handleWriteClick} className="liquid-btn flex items-center gap-1 px-2.5 py-1 text-[10px] bg-rose-200 text-rose-800 font-bold rounded-lg"><Plus size={12} /> 작성</button>
               </div>
-              <div className="max-h-[300px] overflow-y-auto custom-scrollbar p-1.5 bg-white">
-                {loading ? <div className="py-6 text-center font-bold text-slate-400 text-xs">로딩...</div> : notices.length === 0 ? <div className="py-6 text-center font-bold text-slate-400 text-xs">등록된 공지가 없습니다</div> : notices.map(n => (
-                  <button key={n.id} onClick={() => { setViewNotice(n); setShowPopover(false); }} className="w-full text-left px-3 py-2.5 flex flex-col gap-1 hover:bg-gray-100 rounded-xl smooth-transition active:scale-95 border-b border-slate-100/50 last:border-0">
-                    <div className="text-[11px] font-bold text-slate-800 truncate w-full">{n.title}</div><div className="text-[9px] font-bold text-slate-500">{formatDate(n.createdAt)}</div>
+              <div className="max-h-[300px] overflow-y-auto custom-scrollbar p-1.5 bg-white/50">
+                {loading ? <div className="py-6 text-center font-bold text-rose-400 text-xs">로딩...</div> : notices.length === 0 ? <div className="py-6 text-center font-bold text-rose-400 text-xs">등록된 공지가 없습니다</div> : notices.map(n => (
+                  <button key={n.id} onClick={() => { setViewNotice(n); setShowPopover(false); }} className="w-full text-left px-3 py-2.5 flex flex-col gap-1 hover:bg-rose-50 rounded-xl smooth-transition active:scale-95 border-b border-rose-100/30 last:border-0">
+                    <div className="text-[11px] font-bold text-rose-900 truncate w-full">{n.title}</div><div className="text-[9px] font-bold text-rose-500">{formatDate(n.createdAt)}</div>
                   </button>
                 ))}
               </div>

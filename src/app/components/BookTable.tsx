@@ -26,7 +26,7 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
   const isbnToastPortal = copiedIsbn ? createPortal(
     <>
       <div className="fixed z-[9999] pointer-events-none" style={{ left: copiedIsbn.x, top: copiedIsbn.y - 40 }}>
-        <div className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold shadow-lg whitespace-nowrap -translate-x-1/2 backdrop-blur-md" style={{ animation: 'isbnToastFade 0.8s ease-in-out forwards' }}>
+        <div className="liquid-btn px-3 py-1.5 rounded-xl bg-emerald-100/90 text-emerald-800 text-xs font-bold shadow-lg whitespace-nowrap -translate-x-1/2" style={{ animation: 'isbnToastFade 0.8s ease-in-out forwards' }}>
           {copiedIsbn.isbn} 복사됨
         </div>
       </div>
