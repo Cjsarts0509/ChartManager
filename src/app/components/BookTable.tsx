@@ -21,6 +21,34 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
   const [selectedBookForCover, setSelectedBookForCover] = useState<BookWithTrend | null>(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
 
+  // ISBN 복사 토스트 (PC 전용)
+  const [copiedIsbn, setCopiedIsbn] = useState<{ isbn: string; x: number; y: number } | null>(null);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleIsbnClick = useCallback((book: BookWithTrend, e: React.MouseEvent) => {
+    if (isMobile) {
+      setSelectedBookForCover(book);
+      return;
+    }
+    // PC: 클립보드 복사 + 페이드 토스트
+    const clean = book.isbn.replace(/[-\s]/g, '');
+    navigator.clipboard.writeText(clean).catch(() => {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = clean;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    });
+    // 토스트 위치 (클릭 지점 근처)
+    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    setCopiedIsbn({ isbn: clean, x: e.clientX, y: e.clientY });
+    copiedTimerRef.current = setTimeout(() => setCopiedIsbn(null), 800);
+  }, [isMobile]);
+
   // 개별 도서 서가 조회 상태
   const [shelfInfo, setShelfInfo] = useState<ShelfInfoMap>({});
   const [loadingIsbns, setLoadingIsbns] = useState<Set<string>>(new Set());
@@ -64,7 +92,7 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
     }
   }, [storeCode, shelfInfo]);
 
-  /** 도서명 클릭 → 서가 개��� 조회 (모바일) 또는 팝업 (데스크톱) */
+  /** 도서명 클릭 → 서가 개 조회 (모바일) 또는 팝업 (데스크톱) */
   const handleTitleClick = useCallback(async (book: BookWithTrend) => {
     if (!storeCode) return;
 
@@ -281,7 +309,7 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
                         "text-center border-r cursor-pointer active:opacity-60 text-[9px] tracking-tighter py-0.5",
                         isHighlight ? "border-white/20 text-white underline decoration-white/50" : "border-gray-200 text-[#555] underline decoration-gray-300"
                       )}
-                      onClick={() => setSelectedBookForCover(book)}
+                      onClick={(e) => handleIsbnClick(book, e)}
                     >
                       {book.isbn}
                     </div>
@@ -353,6 +381,32 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
             onClose={() => setSelectedBookForCover(null)}
           />
         )}
+
+        {/* ISBN 복사 토스트 (PC) */}
+        {copiedIsbn && (
+          <div
+            className="fixed z-[9999] pointer-events-none"
+            style={{ left: copiedIsbn.x, top: copiedIsbn.y - 40 }}
+          >
+            <div
+              className="px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-medium shadow-lg whitespace-nowrap -translate-x-1/2"
+              style={{
+                animation: 'isbnToastFade 0.8s ease-in-out forwards',
+              }}
+            >
+              {copiedIsbn.isbn} 복사됨
+            </div>
+          </div>
+        )}
+
+        <style>{`
+          @keyframes isbnToastFade {
+            0% { opacity: 0; transform: translateX(-50%) translateY(4px); }
+            15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            70% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+          }
+        `}</style>
       </>
     );
   }
@@ -466,7 +520,7 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
                   "text-center tracking-tighter cursor-pointer transition-opacity active:opacity-60",
                   (isOut || isNew) ? "text-white underline decoration-white/50" : "text-[#555] underline decoration-gray-300 hover:text-blue-600 hover:decoration-blue-400"
                 )}
-                onClick={() => setSelectedBookForCover(book)}
+                onClick={(e) => handleIsbnClick(book, e)}
               >
                 {book.isbn}
               </div>
