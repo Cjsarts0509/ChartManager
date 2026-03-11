@@ -19,10 +19,10 @@ function deepCloneParts(parts: PartConfig[]): PartConfig[] { return JSON.parse(J
 const RankStepper: React.FC<{ value: number; onChange: (v: number) => void; isSelected: boolean; }> = ({ value, onChange, isSelected }) => {
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => { const v = parseInt(e.target.value, 10); if (!isNaN(v) && v >= 1 && v <= 999) onChange(v); };
   return (
-    <div className={`flex items-center rounded-xl border shrink-0 smooth-transition overflow-hidden shadow-sm ${isSelected ? 'border-blue-400 bg-blue-500' : 'border-gray-300 bg-white backdrop-blur-sm'}`} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}>
-      <button onClick={e => { e.stopPropagation(); if (value > 1) onChange(value - 1); }} className={`w-6 h-6 flex items-center justify-center font-bold smooth-transition ${isSelected ? 'text-blue-200 hover:text-white hover:bg-blue-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'}`}><MinusIcon size={10} /></button>
-      <input type="number" value={value} onChange={handleInput} className={`w-9 text-center text-xs font-bold border-x outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none smooth-transition ${isSelected ? 'bg-blue-500 border-blue-400 text-white' : 'bg-transparent border-gray-300 text-gray-800'}`} min={1} max={999} />
-      <button onClick={e => { e.stopPropagation(); if (value < 999) onChange(value + 1); }} className={`w-6 h-6 flex items-center justify-center font-bold smooth-transition ${isSelected ? 'text-blue-200 hover:text-white hover:bg-blue-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'}`}><Plus size={10} /></button>
+    <div className={`flex items-center rounded-xl border shrink-0 smooth-transition overflow-hidden shadow-sm ${isSelected ? 'border-blue-500 bg-blue-600' : 'border-gray-300 bg-white'}`} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}>
+      <button onClick={e => { e.stopPropagation(); if (value > 1) onChange(value - 1); }} className={`w-6 h-6 flex items-center justify-center font-bold smooth-transition ${isSelected ? 'text-white hover:bg-blue-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}><MinusIcon size={10} /></button>
+      <input type="number" value={value} onChange={handleInput} className={`w-9 text-center text-xs font-bold border-x outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none smooth-transition ${isSelected ? 'bg-blue-600 border-blue-500 text-white' : 'bg-transparent border-gray-300 text-gray-800'}`} min={1} max={999} />
+      <button onClick={e => { e.stopPropagation(); if (value < 999) onChange(value + 1); }} className={`w-6 h-6 flex items-center justify-center font-bold smooth-transition ${isSelected ? 'text-white hover:bg-blue-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}><Plus size={10} /></button>
     </div>
   );
 };
@@ -40,7 +40,7 @@ const PartManageDialog: React.FC<{ open: boolean; parts: PartConfig[]; onConfirm
 
   return (
     <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.15)] border border-gray-200 w-[380px] max-h-[70vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-[380px] max-h-[70vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
           <div className="flex items-center gap-2"><Settings2 size={16} className="text-gray-600" /><span className="text-sm font-bold text-gray-800">파트 관리</span></div>
           <button onClick={onClose} className="p-1 font-bold rounded-full hover:bg-gray-200 smooth-transition"><X size={14} className="text-gray-600" /></button>
@@ -48,20 +48,20 @@ const PartManageDialog: React.FC<{ open: boolean; parts: PartConfig[]; onConfirm
         <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-white custom-scrollbar">
           {localParts.length === 0 ? <div className="text-center font-bold text-gray-400 text-xs py-8">등록된 파트가 없습니다</div> : localParts.map((part, idx) => (
             <div key={part.id} className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-gray-200 shadow-sm">
-              <span className="text-xs text-gray-400 font-mono font-bold w-5 shrink-0">{idx + 1}</span><input type="text" value={part.name} onChange={e => handleRename(part.id, e.target.value)} className="flex-1 bg-transparent font-bold border-b border-gray-300 px-2 py-1 text-sm outline-none focus:border-blue-500 transition-colors" placeholder="파트 이름" /><span className="text-[10px] font-bold text-gray-500 shrink-0">{part.categories.length}개</span><button onClick={() => setDeleteTarget(part)} className="p-1.5 font-bold rounded-full hover:bg-red-100 text-gray-400 hover:text-red-600 smooth-transition active:scale-95" title="삭제"><Trash2 size={14} /></button>
+              <span className="text-xs text-gray-400 font-mono font-bold w-5 shrink-0">{idx + 1}</span><input type="text" value={part.name} onChange={e => handleRename(part.id, e.target.value)} className="flex-1 bg-transparent font-bold border-b border-gray-300 px-2 py-1 text-sm outline-none focus:border-blue-500 transition-colors" placeholder="파트 이름" /><span className="text-[10px] font-bold text-gray-500 shrink-0">{part.categories.length}개</span><button onClick={() => setDeleteTarget(part)} className="p-1.5 font-bold rounded-full hover:bg-red-50 text-gray-400 hover:text-red-600 smooth-transition active:scale-95" title="삭제"><Trash2 size={14} /></button>
             </div>
           ))}
         </div>
         <div className="px-3 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
           <button onClick={handleAdd} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-sm hover:bg-blue-700"><Plus size={14} /><span>파트 추가</span></button>
-          <div className="flex items-center gap-2"><button onClick={onClose} className="px-4 py-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded-xl text-sm smooth-transition active:scale-95">취소</button><button onClick={() => { onConfirm(localParts); onClose(); }} className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-sm hover:bg-blue-700"><Check size={14} />확인</button></div>
+          <div className="flex items-center gap-2"><button onClick={onClose} className="px-4 py-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-sm">취소</button><button onClick={() => { onConfirm(localParts); onClose(); }} className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-sm hover:bg-blue-700"><Check size={14} />확인</button></div>
         </div>
         {deleteTarget && (
           <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl border border-red-200 w-[340px] overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
               <div className="px-4 py-3 bg-red-50 border-b border-red-200 flex items-center gap-2"><AlertTriangle size={18} className="text-red-600" /><span className="text-sm font-bold text-red-800">파트 삭제 경고</span></div>
               <div className="px-4 py-4 text-sm font-bold text-gray-700 space-y-2"><p><strong className="text-red-600">"{deleteTarget.name}"</strong> 파트를 삭제하시겠습니까?</p>{deleteTarget.categories.length > 0 && <p className="text-xs text-gray-600 bg-gray-100 rounded-xl p-2">적용된 <strong className="text-gray-800">{deleteTarget.categories.length}개</strong> 조코드가 함께 삭제됩니다.</p>}</div>
-              <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex justify-end gap-2"><button onClick={() => setDeleteTarget(null)} className="px-4 py-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded-xl text-sm smooth-transition active:scale-95">취소</button><button onClick={handleDeleteConfirm} className="px-4 py-1.5 bg-red-600 text-white font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-sm hover:bg-red-700">삭제</button></div>
+              <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex justify-end gap-2"><button onClick={() => setDeleteTarget(null)} className="px-4 py-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-sm">취소</button><button onClick={handleDeleteConfirm} className="px-4 py-1.5 bg-red-600 text-white font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-sm hover:bg-red-700">삭제</button></div>
             </motion.div>
           </div>
         )}
@@ -167,13 +167,13 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({ open
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
-        className="bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-gray-200 w-[760px] max-h-[85vh] flex flex-col overflow-hidden"
+        className="bg-white rounded-3xl shadow-2xl border border-gray-200 w-[760px] max-h-[85vh] flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()} onMouseDown={clearAllSelections}
       >
         <div className="border-b border-gray-200 bg-white shrink-0 px-5 pt-4 pb-3 space-y-3">
           <div className="flex items-stretch gap-3">
             <div className="flex-1 min-w-0 relative" onMouseDown={e => e.stopPropagation()}>
-              <button onClick={() => setShowStoreDropdown(prev => !prev)} className={`w-full h-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold smooth-transition active:scale-[0.98] border shadow-sm ${selectedStore ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+              <button onClick={() => setShowStoreDropdown(prev => !prev)} className={`w-full h-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold smooth-transition active:scale-[0.98] border shadow-sm ${selectedStore ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
                 <MapPin size={14} className={selectedStore ? 'text-emerald-600' : 'text-gray-400'} />
                 {selectedStore ? <span className="flex-1 text-left truncate"><span className="text-emerald-600 font-mono mr-1">{selectedStore.code}</span>{selectedStore.name}</span> : <span className="flex-1 text-left text-gray-500">영업점 선택</span>}
                 <ChevronDown size={12} className={`transition-transform ${showStoreDropdown ? 'rotate-180' : ''}`} />
@@ -182,7 +182,7 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({ open
                 {showStoreDropdown && (
                   <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute left-0 right-0 top-full mt-1 bg-white shadow-xl rounded-2xl z-[210] overflow-hidden border border-gray-200">
                     <div className="p-2 border-b border-gray-200">
-                      <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-1.5"><Search size={13} className="text-gray-500" /><input type="text" value={storeSearch} onChange={e => setStoreSearch(e.target.value)} placeholder="코드 또는 영업점명 검색" className="flex-1 bg-transparent text-sm font-bold outline-none placeholder-gray-400" autoFocus />{storeSearch && <button onClick={() => setStoreSearch('')} className="p-0.5"><X size={12} className="text-gray-500" /></button>}</div>
+                      <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-200"><Search size={13} className="text-gray-500" /><input type="text" value={storeSearch} onChange={e => setStoreSearch(e.target.value)} placeholder="코드 또는 영업점명 검색" className="flex-1 bg-transparent text-sm font-bold outline-none placeholder-gray-400" autoFocus />{storeSearch && <button onClick={() => setStoreSearch('')} className="p-0.5"><X size={12} className="text-gray-500" /></button>}</div>
                     </div>
                     <div className="max-h-[200px] overflow-y-auto custom-scrollbar bg-white">
                       {filteredStores.map(store => (
@@ -197,9 +197,9 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({ open
             </div>
 
             <div className="flex-1 min-w-0 relative" onMouseDown={e => e.stopPropagation()}>
-              <button onClick={() => setShowPartDropdown(prev => !prev)} disabled={parts.length === 0} className={`w-full h-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold smooth-transition active:scale-[0.98] border shadow-sm ${selectedPart ? 'bg-blue-50 border-blue-300 text-blue-800' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'} disabled:opacity-50 disabled:cursor-not-allowed`}>
+              <button onClick={() => setShowPartDropdown(prev => !prev)} disabled={parts.length === 0} className={`w-full h-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold smooth-transition active:scale-[0.98] border shadow-sm ${selectedPart ? 'bg-blue-50 border-blue-300 text-blue-800' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'} disabled:opacity-50 disabled:cursor-not-allowed`}>
                 <Layers size={13} className={selectedPart ? 'text-blue-600' : 'text-gray-400'} />
-                {selectedPart ? <span className="flex-1 text-left truncate"><span className="text-blue-500 font-mono mr-1 text-xs">{String(parts.indexOf(selectedPart) + 1).padStart(3, '0')}</span>{selectedPart.name}</span> : <span className="flex-1 text-left text-gray-500">{parts.length === 0 ? '파트 없음' : '파트 선택'}</span>}
+                {selectedPart ? <span className="flex-1 text-left truncate"><span className="text-blue-600 font-mono mr-1 text-xs">{String(parts.indexOf(selectedPart) + 1).padStart(3, '0')}</span>{selectedPart.name}</span> : <span className="flex-1 text-left text-gray-500">{parts.length === 0 ? '파트 없음' : '파트 선택'}</span>}
                 <ChevronDown size={12} className={`transition-transform ${showPartDropdown ? 'rotate-180' : ''}`} />
               </button>
               <AnimatePresence>
@@ -244,7 +244,7 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({ open
                   {CATEGORIES.map((cat) => {
                     const isInCurrentPart = activeCategorySet.has(cat);
                     return (
-                      <div key={cat} onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); toggleInactive(cat, e); }} onDoubleClick={() => doubleClickInactive(cat)} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl mb-0.5 cursor-pointer select-none text-sm font-bold smooth-transition shadow-sm ${selectedInactive.has(cat) ? 'bg-blue-600 text-white' : isInCurrentPart ? 'bg-gray-100 text-gray-400 border border-gray-200' : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-200'}`}>
+                      <div key={cat} onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); toggleInactive(cat, e); }} onDoubleClick={() => doubleClickInactive(cat)} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl mb-0.5 cursor-pointer select-none text-sm font-bold smooth-transition shadow-sm ${selectedInactive.has(cat) ? 'bg-blue-600 text-white' : isInCurrentPart ? 'bg-gray-50 text-gray-400 border border-gray-200' : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-200'}`}>
                         <span className="flex-1 truncate">{cat}</span>
                         {isInCurrentPart && !selectedInactive.has(cat) && <span className="text-[9px] text-blue-600 shrink-0 font-bold">적용됨</span>}
                       </div>
@@ -268,9 +268,9 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({ open
                 </div>
                 <div className="flex-1 overflow-y-auto p-2 bg-white custom-scrollbar">
                   {!selectedPart ? (
-                    <div className="flex items-center justify-center h-full text-gray-400 font-bold text-xs">{parts.length === 0 ? '파트관리에서 파트를 추가하세요' : '파트를 선택하세요'}</div>
+                    <div className="flex items-center justify-center h-full text-gray-500 font-bold text-xs">{parts.length === 0 ? '파트관리에서 파트를 추가하세요' : '파트를 선택하세요'}</div>
                   ) : activeCategories.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-gray-400 font-bold text-xs">적용된 조코드가 없습니다</div>
+                    <div className="flex items-center justify-center h-full text-gray-500 font-bold text-xs">적용된 조코드가 없습니다</div>
                   ) : (
                     activeCategories.map((item, index) => (
                       <div key={item.code} draggable onMouseDown={e => e.stopPropagation()} onDragStart={() => handleDragStart(item.code)} onDragOver={e => handleDragOver(e, index)} onDrop={e => handleDrop(e, index)} onDragEnd={handleDragEnd} onClick={e => { e.stopPropagation(); toggleActive(item.code, e); }} onDoubleClick={() => doubleClickActive(item.code)} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl mb-0.5 cursor-pointer select-none text-sm font-bold smooth-transition shadow-sm ${dragOverIndex === index ? 'border-t-2 border-blue-500' : ''} ${selectedActive.has(item.code) ? 'bg-blue-600 text-white' : 'bg-white hover:bg-blue-50 text-gray-800 border border-gray-200'}`}>
