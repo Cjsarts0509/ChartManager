@@ -8,14 +8,10 @@
     @apply bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)];
   }
 
-  /* 마이크로 애니메이션을 위한 커스텀 완화 곡선 (Spring 느낌) */
-  .ease-spring {
-    transition-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
-
-  /* 부드러운 상태 전환 */
+  /* 부드러운 상태 전환 (에러 수정됨: ease-spring 직접 입력) */
   .smooth-transition {
-    @apply transition-all duration-300 ease-spring;
+    @apply transition-all duration-300;
+    transition-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
 }
 

@@ -12,6 +12,7 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Plus, Trash2, Bold, Italic, Underline as UnderlineIcon,
   Strikethrough, AlignLeft, AlignCenter, AlignRight,
@@ -31,7 +32,6 @@ interface Notice {
   updatedAt?: string;
 }
 
-// ── Custom Extension for Font Size ──
 const FontSize = Extension.create({
   name: 'fontSize',
   addOptions() { return { types: ['textStyle'] }; },
@@ -58,21 +58,14 @@ const FontSize = Extension.create({
   },
 });
 
-// ── API helpers ──
 async function safeJson(res: Response): Promise<any> {
   const text = await res.text();
-  try {
-    return JSON.parse(text);
-  } catch {
-    console.error('Non-JSON response:', res.status, text.slice(0, 200));
-    throw new Error(`서버 응답 오류 (${res.status}): 라우트를 찾을 수 없습니다.`);
-  }
+  try { return JSON.parse(text); } 
+  catch { throw new Error(`서버 응답 오류 (${res.status})`); }
 }
 
 async function fetchNotices(): Promise<Notice[]> {
-  const res = await fetch(`${API_BASE}/notices`, {
-    headers: { Authorization: `Bearer ${publicAnonKey}` },
-  });
+  const res = await fetch(`${API_BASE}/notices`, { headers: { Authorization: `Bearer ${publicAnonKey}` } });
   const data = await safeJson(res);
   if (!res.ok) throw new Error(data.error || 'Failed to fetch notices');
   return data.notices || [];
@@ -110,7 +103,6 @@ async function deleteNotice(id: string, password: string): Promise<void> {
   if (!res.ok) throw new Error(data.error || '삭제 실패');
 }
 
-// ── Password Dialog ──
 function PasswordDialog({ onConfirm, onCancel, title }: {
   onConfirm: (pw: string) => void;
   onCancel: () => void;
@@ -120,8 +112,15 @@ function PasswordDialog({ onConfirm, onCancel, title }: {
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => { inputRef.current?.focus(); }, []);
   return createPortal(
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40" onClick={onCancel}>
-      <div className="bg-white rounded-xl shadow-2xl w-[320px] p-5" onClick={e => e.stopPropagation()} data-no-drag>
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onCancel}>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="glass-panel bg-white/90 rounded-2xl p-5 w-[320px]" 
+        onClick={e => e.stopPropagation()} 
+        data-no-drag
+      >
         <div className="flex items-center gap-2 mb-4">
           <Lock size={16} className="text-gray-500" />
           <h3 className="font-bold text-sm text-gray-800">{title}</h3>
@@ -133,17 +132,17 @@ function PasswordDialog({ onConfirm, onCancel, title }: {
           onChange={e => setPw(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && pw && onConfirm(pw)}
           placeholder="암호를 입력하세요"
-          className="w-full border rounded-lg px-3 py-2 text-sm mb-3 outline-none focus:ring-2 focus:ring-blue-300"
+          className="w-full border border-gray-200/50 rounded-xl px-3 py-2 text-sm mb-3 outline-none focus:ring-2 focus:ring-blue-300 bg-white/50"
         />
         <div className="flex justify-end gap-2">
-          <button onClick={onCancel} className="px-4 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-lg">취소</button>
+          <button onClick={onCancel} className="px-4 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-lg smooth-transition active:scale-95">취소</button>
           <button
             onClick={() => pw && onConfirm(pw)}
             disabled={!pw}
-            className="px-4 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40"
+            className="px-4 py-1.5 text-xs bg-blue-600/90 backdrop-blur-sm text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 smooth-transition active:scale-95"
           >확인</button>
         </div>
-      </div>
+      </motion.div>
     </div>,
     document.body
   );
@@ -155,7 +154,6 @@ const COLORS = [
   '#8b5cf6', '#ec4899', '#14b8a6', '#0ea5e9', '#6366f1',
 ];
 
-// ── Editor Toolbar ──
 function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
   const [showColor, setShowColor] = useState(false);
   const [showHighlight, setShowHighlight] = useState(false);
@@ -167,7 +165,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       type="button"
       onClick={onClick}
       title={title}
-      className={`p-1 rounded transition-colors ${active ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
+      className={`p-1 rounded smooth-transition active:scale-95 ${active ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200/50'}`}
     >
       {children}
     </button>
@@ -188,7 +186,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-gray-50/80 rounded-t-lg relative">
+    <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-gray-50/50 backdrop-blur-sm rounded-t-lg relative border-b border-gray-100/50">
       <Btn onClick={() => editor.chain().focus().undo().run()} title="실행취소"><Undo2 size={14} /></Btn>
       <Btn onClick={() => editor.chain().focus().redo().run()} title="다시실행"><Redo2 size={14} /></Btn>
       <div className="w-px h-4 bg-gray-300 mx-1" />
@@ -197,21 +195,18 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       <Btn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="제목3"><Heading3 size={14} /></Btn>
       <div className="w-px h-4 bg-gray-300 mx-1" />
       
-      {/* Font Size Up/Down (폰트 사이즈 업/다운 버튼) */}
-      <div className="flex items-center border border-gray-300 rounded shadow-sm overflow-hidden h-[26px]">
+      <div className="flex items-center border border-gray-200/50 bg-white/50 rounded shadow-sm overflow-hidden h-[26px]">
         <button
           type="button"
           onClick={() => {
             closeAllPopups();
             const current = editor.getAttributes('textStyle').fontSize || '16px';
             const num = parseInt(current, 10);
-            editor.chain().focus().setFontSize(`${Math.max(10, num - 2)}px`).run(); // 최소 10px
+            editor.chain().focus().setFontSize(`${Math.max(10, num - 2)}px`).run();
           }}
           title="글자 작게 (-2px)"
-          className="px-2.5 h-full text-gray-600 hover:bg-gray-200 font-bold text-[11px] flex items-center justify-center transition-colors"
-        >
-          A-
-        </button>
+          className="px-2.5 h-full text-gray-600 hover:bg-gray-200 font-bold text-[11px] flex items-center justify-center smooth-transition active:bg-gray-300"
+        >A-</button>
         <div className="w-px h-4 bg-gray-300" />
         <button
           type="button"
@@ -219,13 +214,11 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
             closeAllPopups();
             const current = editor.getAttributes('textStyle').fontSize || '16px';
             const num = parseInt(current, 10);
-            editor.chain().focus().setFontSize(`${Math.min(60, num + 2)}px`).run(); // 최대 60px
+            editor.chain().focus().setFontSize(`${Math.min(60, num + 2)}px`).run();
           }}
           title="글자 크게 (+2px)"
-          className="px-2.5 h-full text-gray-600 hover:bg-gray-200 font-bold text-[14px] flex items-center justify-center transition-colors"
-        >
-          A+
-        </button>
+          className="px-2.5 h-full text-gray-600 hover:bg-gray-200 font-bold text-[14px] flex items-center justify-center smooth-transition active:bg-gray-300"
+        >A+</button>
       </div>
 
       <div className="w-px h-4 bg-gray-300 mx-1" />
@@ -235,7 +228,6 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       <Btn active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()} title="취소선"><Strikethrough size={14} /></Btn>
       <div className="w-px h-4 bg-gray-300 mx-1" />
 
-      {/* Text Color */}
       <div className="relative">
         <Btn onClick={() => { closeAllPopups(); setShowColor(!showColor); }} title="글자색">
           <div className="flex flex-col items-center">
@@ -244,9 +236,9 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
           </div>
         </Btn>
         {showColor && (
-          <div className="absolute top-full left-0 mt-1 z-[100] bg-white shadow-xl rounded-lg border p-2 grid grid-cols-5 gap-1.5 w-[140px]">
+          <div className="glass-panel absolute top-full left-0 mt-1 z-[100] bg-white/90 rounded-xl p-2 grid grid-cols-5 gap-1.5 w-[140px]">
             {COLORS.map(c => (
-              <button key={c} className="w-5 h-5 rounded-full border border-gray-200 hover:scale-125 transition-transform"
+              <button key={c} className="w-5 h-5 rounded-full border border-gray-200 hover:scale-125 smooth-transition"
                 style={{ backgroundColor: c }}
                 onClick={() => { editor.chain().focus().setColor(c).run(); setShowColor(false); }}
               />
@@ -255,20 +247,19 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
         )}
       </div>
 
-      {/* Highlight */}
       <div className="relative">
         <Btn active={editor.isActive('highlight')} onClick={() => { closeAllPopups(); setShowHighlight(!showHighlight); }} title="형광펜">
           <Highlighter size={14} />
         </Btn>
         {showHighlight && (
-          <div className="absolute top-full left-0 mt-1 z-[100] bg-white shadow-xl rounded-lg border p-2 grid grid-cols-4 gap-1.5 w-[120px]">
+          <div className="glass-panel absolute top-full left-0 mt-1 z-[100] bg-white/90 rounded-xl p-2 grid grid-cols-4 gap-1.5 w-[120px]">
             {['#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff', '#fed7aa'].map(c => (
-              <button key={c} className="w-5 h-5 rounded-full border border-gray-200 hover:scale-125 transition-transform"
+              <button key={c} className="w-5 h-5 rounded-full border border-gray-200 hover:scale-125 smooth-transition"
                 style={{ backgroundColor: c }}
                 onClick={() => { editor.chain().focus().toggleHighlight({ color: c }).run(); setShowHighlight(false); }}
               />
             ))}
-            <button className="w-5 h-5 rounded-full border border-gray-300 text-[9px] hover:scale-125 transition-transform flex items-center justify-center font-bold text-gray-500"
+            <button className="w-5 h-5 rounded-full border border-gray-300 text-[9px] hover:scale-125 smooth-transition flex items-center justify-center font-bold text-gray-500"
               onClick={() => { editor.chain().focus().unsetHighlight().run(); setShowHighlight(false); }}
             >X</button>
           </div>
@@ -286,20 +277,18 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       <Btn onClick={addTable} title="표 삽입"><TableIcon size={14} /></Btn>
       <Btn onClick={addImage} title="이미지 삽입"><Image size={14} /></Btn>
 
-      {/* Table controls */}
       {editor.isActive('table') && (
         <div className="flex gap-1 ml-auto">
-          <button onClick={() => editor.chain().focus().addColumnAfter().run()} className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded hover:bg-blue-100">열+</button>
-          <button onClick={() => editor.chain().focus().deleteColumn().run()} className="text-[10px] px-1.5 py-0.5 bg-red-50 text-red-600 rounded hover:bg-red-100">열-</button>
-          <button onClick={() => editor.chain().focus().addRowAfter().run()} className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded hover:bg-blue-100">행+</button>
-          <button onClick={() => editor.chain().focus().deleteRow().run()} className="text-[10px] px-1.5 py-0.5 bg-red-50 text-red-600 rounded hover:bg-red-100">행-</button>
+          <button onClick={() => editor.chain().focus().addColumnAfter().run()} className="text-[10px] px-1.5 py-0.5 bg-blue-50/80 text-blue-700 rounded smooth-transition hover:bg-blue-100">열+</button>
+          <button onClick={() => editor.chain().focus().deleteColumn().run()} className="text-[10px] px-1.5 py-0.5 bg-red-50/80 text-red-600 rounded smooth-transition hover:bg-red-100">열-</button>
+          <button onClick={() => editor.chain().focus().addRowAfter().run()} className="text-[10px] px-1.5 py-0.5 bg-blue-50/80 text-blue-700 rounded smooth-transition hover:bg-blue-100">행+</button>
+          <button onClick={() => editor.chain().focus().deleteRow().run()} className="text-[10px] px-1.5 py-0.5 bg-red-50/80 text-red-600 rounded smooth-transition hover:bg-red-100">행-</button>
         </div>
       )}
     </div>
   );
 }
 
-// ── Write/Edit Dialog ──
 function WriteDialog({ initialData, onSave, onCancel, saving }: {
   initialData?: Notice | null;
   onSave: (title: string, content: string) => void;
@@ -309,35 +298,32 @@ function WriteDialog({ initialData, onSave, onCancel, saving }: {
   const [title, setTitle] = useState(initialData?.title || '');
   const editor = useEditor({
     extensions: [
-      StarterKit,
-      Underline,
-      TextStyle,
-      Color,
-      FontSize,
+      StarterKit, Underline, TextStyle, Color, FontSize,
       Highlight.configure({ multicolor: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableCell,
-      TableHeader,
+      Table.configure({ resizable: true }), TableRow, TableCell, TableHeader,
       ImageExt.configure({ inline: true, allowBase64: true }),
     ],
     content: initialData?.content || '<p></p>',
     editorProps: {
-      attributes: { class: 'prose prose-sm max-w-none focus:outline-none min-h-[350px] px-5 py-4' },
+      attributes: { class: 'prose prose-sm max-w-none focus:outline-none min-h-[350px] px-5 py-4 bg-white/50 rounded-b-lg' },
     },
   });
 
   return createPortal(
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50">
-      <div
-        className="bg-white rounded-xl shadow-2xl w-[90vw] max-w-[750px] max-h-[90vh] flex flex-col overflow-hidden"
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="glass-panel bg-white/90 rounded-2xl w-[90vw] max-w-[750px] max-h-[90vh] flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
         data-no-drag
       >
-        <div className="flex items-center justify-between px-5 py-3 border-b bg-gray-50">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200/50 bg-gray-50/50">
           <h2 className="font-bold text-base text-gray-800">{initialData ? '게시글 수정' : '게시글 작성'}</h2>
-          <button onClick={onCancel} className="p-1.5 hover:bg-gray-200 rounded-full transition-colors"><X size={18} /></button>
+          <button onClick={onCancel} className="p-1.5 hover:bg-gray-200/50 rounded-full smooth-transition"><X size={18} /></button>
         </div>
 
         <div className="px-5 pt-4">
@@ -346,21 +332,21 @@ function WriteDialog({ initialData, onSave, onCancel, saving }: {
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="제목을 입력하세요"
-            className="w-full text-lg font-semibold border-b pb-2 outline-none focus:border-blue-500 placeholder-gray-300 transition-colors"
+            className="w-full text-lg font-semibold border-b border-gray-200/50 pb-2 outline-none focus:border-blue-500 bg-transparent placeholder-gray-400 smooth-transition"
           />
         </div>
 
-        <div className="flex flex-col flex-1 mx-5 mt-4 mb-4 border rounded-lg min-h-0 bg-white shadow-[0_2px_8px_-4px_rgba(0,0,0,0.1)]">
-          <div className="shrink-0 border-b bg-gray-50/50 rounded-t-lg">
+        <div className="flex flex-col flex-1 mx-5 mt-4 mb-4 border border-gray-200/50 rounded-xl min-h-0 bg-white/60 shadow-inner">
+          <div className="shrink-0">
             <EditorToolbar editor={editor} />
           </div>
-          <div className="flex-1 overflow-auto rounded-b-lg custom-scrollbar">
+          <div className="flex-1 overflow-auto custom-scrollbar">
             <EditorContent editor={editor} />
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 px-5 py-3 border-t bg-gray-50 shrink-0">
-          <button onClick={onCancel} className="px-5 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded-lg transition-colors font-medium">취소</button>
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200/50 bg-gray-50/50 shrink-0">
+          <button onClick={onCancel} className="px-5 py-2 text-sm text-gray-600 hover:bg-gray-200/80 rounded-xl smooth-transition active:scale-95 font-medium">취소</button>
           <button
             onClick={() => {
               if (!title.trim()) { alert('제목을 입력해주세요.'); return; }
@@ -368,19 +354,18 @@ function WriteDialog({ initialData, onSave, onCancel, saving }: {
               onSave(title.trim(), editor.getHTML());
             }}
             disabled={saving || !title.trim()}
-            className="px-6 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 flex items-center gap-1.5 font-bold transition-colors"
+            className="px-6 py-2 text-sm bg-blue-600/90 backdrop-blur-sm text-white rounded-xl hover:bg-blue-700 disabled:opacity-40 flex items-center gap-1.5 font-bold smooth-transition active:scale-95"
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
             저장
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>,
     document.body
   );
 }
 
-// ── View Dialog ──
 function ViewDialog({ notice, onClose, onEdit, onDelete }: {
   notice: Notice;
   onClose: () => void;
@@ -393,54 +378,49 @@ function ViewDialog({ notice, onClose, onEdit, onDelete }: {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div
-        className="bg-white rounded-xl shadow-2xl w-[90vw] max-w-[700px] max-h-[85vh] flex flex-col overflow-hidden"
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="glass-panel bg-white/90 rounded-2xl w-[90vw] max-w-[700px] max-h-[85vh] flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
         data-no-drag
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b bg-gray-50">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200/50 bg-gray-50/50">
           <div className="flex-1 min-w-0 pr-4">
             <h2 className="font-bold text-lg text-gray-800 truncate mb-1">{notice.title}</h2>
-            <div className="text-xs text-gray-400">
+            <div className="text-xs text-gray-500">
               {formatDate(notice.createdAt)}
               {notice.updatedAt && <span className="ml-2 pl-2 border-l border-gray-300">수정됨: {formatDate(notice.updatedAt)}</span>}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={onEdit}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors font-medium"
-            >
+            <button onClick={onEdit} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-indigo-50/80 text-indigo-600 hover:bg-indigo-100 rounded-xl border border-indigo-200/50 smooth-transition active:scale-95 font-medium">
               <Pencil size={13} />수정
             </button>
-            <button
-              onClick={onDelete}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-50 text-red-600 hover:bg-red-100 rounded-lg border border-red-200 transition-colors font-medium"
-            >
+            <button onClick={onDelete} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-50/80 text-red-600 hover:bg-red-100 rounded-xl border border-red-200/50 smooth-transition active:scale-95 font-medium">
               <Trash2 size={13} />삭제
             </button>
             <div className="w-px h-4 bg-gray-300 mx-1"></div>
-            <button onClick={onClose} className="p-1.5 hover:bg-gray-200 rounded-full transition-colors"><X size={18} /></button>
+            <button onClick={onClose} className="p-1.5 hover:bg-gray-200/80 rounded-full smooth-transition"><X size={18} /></button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto px-6 py-6 custom-scrollbar bg-white">
+        <div className="flex-1 overflow-auto px-6 py-6 custom-scrollbar bg-white/50">
           <div
             className="prose prose-sm max-w-none notice-content"
             dangerouslySetInnerHTML={{ __html: notice.content }}
           />
         </div>
-      </div>
+      </motion.div>
     </div>,
     document.body
   );
 }
 
-// ── Button & Popover (for TopBar) ──
-interface InlineNoticePanelProps {
-  className?: string;
-}
+interface InlineNoticePanelProps { className?: string; }
 
 export const InlineNoticePanel: React.FC<InlineNoticePanelProps> = ({ className }) => {
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -500,19 +480,13 @@ export const InlineNoticePanel: React.FC<InlineNoticePanelProps> = ({ className 
     if (!pw) return;
     setSaving(true);
     try {
-      if (editData) {
-        await updateNotice(editData.id, pw, title, content);
-      } else {
-        await createNotice(pw, title, content);
-      }
+      if (editData) await updateNotice(editData.id, pw, title, content);
+      else await createNotice(pw, title, content);
       pendingPw.current = null;
       setShowWrite(false);
       await load();
-    } catch (e: any) {
-      alert(e.message || '저장 실패');
-    } finally {
-      setSaving(false);
-    }
+    } catch (e: any) { alert(e.message || '저장 실패'); }
+    finally { setSaving(false); }
   };
 
   const handlePwConfirm = async (pw: string) => {
@@ -534,9 +508,7 @@ export const InlineNoticePanel: React.FC<InlineNoticePanelProps> = ({ className 
         await deleteNotice(payload, pw);
         setViewNotice(null);
         await load();
-      } catch (e: any) {
-        alert(e.message || '삭제 실패');
-      }
+      } catch (e: any) { alert(e.message || '삭제 실패'); }
     }
   };
 
@@ -548,76 +520,69 @@ export const InlineNoticePanel: React.FC<InlineNoticePanelProps> = ({ className 
   return (
     <>
       <div className={`relative flex ${className || ''}`} ref={popoverRef} data-no-drag>
-        {/* 공지사항 붉은색 테마 버튼 */}
         <button
           onClick={() => {
             const next = !showPopover;
             setShowPopover(next);
             if (next) load();
           }}
-          className="flex flex-col items-center justify-center bg-red-50/80 hover:bg-red-100 hover:shadow-sm hover:-translate-y-0.5 text-red-700 border border-red-200/50 w-[72px] h-[60px] rounded-xl transition-all duration-300"
+          className="flex flex-col items-center justify-center bg-red-50/80 hover:bg-red-100 text-red-700 border border-red-200/50 w-[72px] h-[60px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md"
         >
           <Bell size={22} className="mb-1" />
           <span className="text-[11px] font-bold whitespace-nowrap">공지사항</span>
         </button>
 
-        {/* 드롭다운 (Popover) 영역 */}
-        {showPopover && (
-          <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-[300px] bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] border border-slate-100 z-[60] overflow-hidden flex flex-col origin-top animate-in fade-in slide-in-from-top-2">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100/60 bg-slate-50/80">
-              <span className="text-xs font-bold text-slate-700">사내 공지사항</span>
-              <button onClick={handleWriteClick} className="flex items-center gap-1 px-2.5 py-1 text-[10px] bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors font-semibold border border-red-100">
-                <Plus size={12} /> 작성
-              </button>
-            </div>
-            
-            <div className="max-h-[300px] overflow-y-auto custom-scrollbar p-1.5">
-              {loading ? (
-                <div className="py-6 text-center text-slate-400 text-xs">로딩...</div>
-              ) : notices.length === 0 ? (
-                <div className="py-6 text-center text-slate-400 text-xs">등록된 공지가 없습니다</div>
-              ) : (
-                notices.map(n => (
-                  <button
-                    key={n.id}
-                    onClick={() => { setViewNotice(n); setShowPopover(false); }}
-                    className="w-full text-left px-3 py-2.5 flex flex-col gap-1 hover:bg-slate-50 rounded-lg transition-colors border-b border-slate-50 last:border-0"
-                  >
-                    <div className="text-[11px] font-semibold text-slate-700 truncate w-full">{n.title}</div>
-                    <div className="text-[9px] text-slate-400">{formatDate(n.createdAt)}</div>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {showPopover && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="glass-panel absolute top-full mt-2 left-1/2 -translate-x-1/2 w-[300px] bg-white/90 rounded-2xl z-[60] overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100/50 bg-slate-50/50">
+                <span className="text-xs font-bold text-slate-700">사내 공지사항</span>
+                <button onClick={handleWriteClick} className="flex items-center gap-1 px-2.5 py-1 text-[10px] bg-red-50/80 text-red-600 hover:bg-red-100 rounded-lg smooth-transition active:scale-95 font-semibold border border-red-100/50">
+                  <Plus size={12} /> 작성
+                </button>
+              </div>
+              
+              <div className="max-h-[300px] overflow-y-auto custom-scrollbar p-1.5">
+                {loading ? (
+                  <div className="py-6 text-center text-slate-400 text-xs">로딩...</div>
+                ) : notices.length === 0 ? (
+                  <div className="py-6 text-center text-slate-400 text-xs">등록된 공지가 없습니다</div>
+                ) : (
+                  notices.map(n => (
+                    <button
+                      key={n.id}
+                      onClick={() => { setViewNotice(n); setShowPopover(false); }}
+                      className="w-full text-left px-3 py-2.5 flex flex-col gap-1 hover:bg-white/60 rounded-xl smooth-transition active:scale-95 border-b border-slate-100/30 last:border-0"
+                    >
+                      <div className="text-[11px] font-semibold text-slate-700 truncate w-full">{n.title}</div>
+                      <div className="text-[9px] text-slate-400">{formatDate(n.createdAt)}</div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {showWrite && (
-        <WriteDialog
-          initialData={editData}
-          onSave={handleSave}
-          onCancel={() => setShowWrite(false)}
-          saving={saving}
-        />
-      )}
-      {viewNotice && (
-        <ViewDialog
-          notice={viewNotice}
-          onClose={() => setViewNotice(null)}
-          onEdit={handleEditClick}
-          onDelete={handleDeleteClick}
-        />
-      )}
-      {pwDialog && (
-        <PasswordDialog
-          title={pwDialog.action === 'write' ? '게시글 작성 암호' : pwDialog.action === 'edit' ? '게시글 수정 암호' : '게시글 삭제 암호'}
-          onConfirm={handlePwConfirm}
-          onCancel={() => setPwDialog(null)}
-        />
-      )}
+      <AnimatePresence>
+        {showWrite && (
+          <WriteDialog initialData={editData} onSave={handleSave} onCancel={() => setShowWrite(false)} saving={saving} />
+        )}
+        {viewNotice && (
+          <ViewDialog notice={viewNotice} onClose={() => setViewNotice(null)} onEdit={handleEditClick} onDelete={handleDeleteClick} />
+        )}
+        {pwDialog && (
+          <PasswordDialog title={pwDialog.action === 'write' ? '게시글 작성 암호' : pwDialog.action === 'edit' ? '게시글 수정 암호' : '게시글 삭제 암호'} onConfirm={handlePwConfirm} onCancel={() => setPwDialog(null)} />
+        )}
+      </AnimatePresence>
 
-      {/* TipTap content styles */}
       <style>{`
         .notice-content h1 { font-size: 1.8em; font-weight: 700; margin: 0.5em 0; }
         .notice-content h2 { font-size: 1.5em; font-weight: 700; margin: 0.5em 0; }

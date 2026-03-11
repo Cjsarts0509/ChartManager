@@ -104,14 +104,12 @@ export const TopBar: React.FC<TopBarProps> = ({
   const hasParts = storeParts && storeParts.length > 0;
 
   return (
-    <div className="bg-white/60 backdrop-blur-xl border-b border-white/40 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] print:hidden relative z-50">
+    <div className="glass-panel print:hidden relative z-50">
       <div className="px-3 py-2 flex justify-center">
         <div className="flex items-stretch gap-2">
 
-          {/* ===== Controls ===== */}
-
             {/* Upload Button */}
-            <div className="border-2 border-dashed border-slate-300/60 rounded-2xl px-5 flex flex-col items-center justify-center gap-0.5 bg-white/40 hover:bg-white hover:border-slate-400 hover:shadow-md hover:-translate-y-0.5 cursor-pointer transition-all duration-300 min-w-[158px] h-[60px]"
+            <div className="border-2 border-dashed border-slate-300/60 rounded-2xl px-5 flex flex-col items-center justify-center gap-0.5 bg-white/40 hover:bg-white hover:border-slate-400 hover:shadow-md smooth-transition active:scale-95 hover:-translate-y-0.5 cursor-pointer min-w-[158px] h-[60px]"
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload size={22} className="text-slate-500 transition-transform duration-300 group-hover:scale-110 mb-0.5" />
@@ -129,7 +127,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             {/* Cloud File Status */}
             <div className="flex flex-col gap-1.5 min-w-0 justify-center h-[60px]" style={{ flex: '0 1 380px' }}>
               {/* This Week */}
-              <div className="border border-white/60 shadow-sm rounded-xl px-3 py-1 bg-white/60 backdrop-blur-sm flex items-center gap-2 transition-all duration-300 hover:bg-white/90">
+              <div className="border border-white/60 shadow-sm rounded-xl px-3 py-1 bg-white/60 backdrop-blur-sm flex items-center gap-2 smooth-transition hover:bg-white/90 cursor-default">
                 <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100/80 px-1.5 py-0.5 rounded-md shrink-0">최신</span>
                 {thisWeekCloud?.exists ? (
                   <div className="flex-1 min-w-0 flex items-center gap-2">
@@ -143,7 +141,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               </div>
 
               {/* Last Week */}
-              <div className="border border-white/60 shadow-sm rounded-xl px-3 py-1 bg-white/60 backdrop-blur-sm flex items-center gap-2 transition-all duration-300 hover:bg-white/90">
+              <div className="border border-white/60 shadow-sm rounded-xl px-3 py-1 bg-white/60 backdrop-blur-sm flex items-center gap-2 smooth-transition hover:bg-white/90 cursor-default">
                 <span className="text-[10px] font-bold text-orange-600 bg-orange-100/80 px-1.5 py-0.5 rounded-md shrink-0">이전</span>
                 {lastWeekCloud?.exists ? (
                   <div className="flex-1 min-w-0 flex items-center gap-2">
@@ -157,64 +155,56 @@ export const TopBar: React.FC<TopBarProps> = ({
               </div>
             </div>
 
-            {/* Action Buttons (크기 및 폰트 시원하게 확장!) */}
+            {/* Action Buttons */}
             <div className="flex gap-1.5 shrink-0 h-[60px]">
-              
-              {/* 1. 공지사항 버튼 (NoticeBoard.tsx 컴포넌트가 버튼 형태로 렌더링됨) */}
               <InlineNoticePanel />
 
-              {/* 2. 클라우드 버튼 */}
               <button 
                 onClick={onRefreshCloud}
                 disabled={cloudLoading}
-                className="flex flex-col items-center justify-center bg-emerald-50/80 hover:bg-emerald-100 hover:shadow-sm hover:-translate-y-0.5 text-emerald-700 border border-emerald-200/50 w-[72px] rounded-xl transition-all duration-300 disabled:opacity-50 disabled:hover:translate-y-0"
+                className="flex flex-col items-center justify-center bg-emerald-50/80 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/50 w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md disabled:opacity-50 disabled:hover:translate-y-0"
               >
                 <RefreshCw size={22} className={`mb-1 ${cloudLoading ? 'animate-spin' : ''}`} />
                 <span className="text-[11px] font-bold whitespace-nowrap">{cloudLoading ? '동기화중' : '클라우드'}</span>
               </button>
 
-              {/* 3. 게시판 버튼 */}
               <a
                 href={BOARD_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex flex-col items-center justify-center bg-blue-50/80 hover:bg-blue-100 hover:shadow-sm hover:-translate-y-0.5 text-blue-700 border border-blue-200/50 w-[72px] rounded-xl transition-all duration-300"
+                className="flex flex-col items-center justify-center bg-blue-50/80 hover:bg-blue-100 text-blue-700 border border-blue-200/50 w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md"
               >
                 <ExternalLink size={22} className="mb-1" />
                 <span className="text-[11px] font-bold whitespace-nowrap">게시판</span>
               </a>
 
-              {/* 4. 페이지추가 버튼 */}
               <button 
                 onClick={onAddList}
-                className="flex flex-col items-center justify-center bg-slate-100/80 hover:bg-slate-200 hover:shadow-sm hover:-translate-y-0.5 text-slate-700 border border-slate-200/50 w-[72px] rounded-xl transition-all duration-300"
+                className="flex flex-col items-center justify-center bg-slate-100/80 hover:bg-slate-200 text-slate-700 border border-slate-200/50 w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md"
               >
                 <Plus size={22} className="mb-1" />
                 <span className="text-[11px] font-bold whitespace-nowrap">페이지추가</span>
               </button>
 
-              {/* 5. 전체인쇄 버튼 */}
               <button 
                 onClick={onPrint}
-                className="flex flex-col items-center justify-center bg-white/80 hover:bg-white hover:shadow-sm hover:-translate-y-0.5 text-slate-700 border border-white/60 w-[72px] rounded-xl transition-all duration-300 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]"
+                className="flex flex-col items-center justify-center bg-white/80 hover:bg-white text-slate-700 border border-white/60 w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]"
               >
                 <Printer size={22} className="mb-1" />
                 <span className="text-[11px] font-bold whitespace-nowrap">전체인쇄</span>
               </button>
 
-              {/* 6. A4인쇄 버튼 */}
               <button 
                 onClick={onPrintA4}
-                className="flex flex-col items-center justify-center bg-amber-50/80 hover:bg-amber-100 hover:shadow-sm hover:-translate-y-0.5 text-amber-700 border border-amber-200/50 w-[72px] rounded-xl transition-all duration-300"
+                className="flex flex-col items-center justify-center bg-amber-50/80 hover:bg-amber-100 text-amber-700 border border-amber-200/50 w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md"
               >
                 <FileText size={22} className="mb-1" />
                 <span className="text-[11px] font-bold whitespace-nowrap">A4인쇄</span>
               </button>
 
-              {/* 7. 설정 버튼 */}
               <button 
                 onClick={onOpenCategoryConfig}
-                className="flex flex-col items-center justify-center bg-slate-50/80 hover:bg-slate-100 hover:shadow-sm hover:-translate-y-0.5 text-slate-700 border border-slate-200/50 w-[72px] rounded-xl transition-all duration-300"
+                className="flex flex-col items-center justify-center bg-slate-50/80 hover:bg-slate-100 text-slate-700 border border-slate-200/50 w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md"
               >
                 <Settings size={22} className="mb-1" />
                 <span className="text-[11px] font-bold whitespace-nowrap text-center">설정</span>
@@ -226,11 +216,10 @@ export const TopBar: React.FC<TopBarProps> = ({
 
             {/* Store + Part + Actions */}
             <div className="flex flex-col gap-1 min-w-0 justify-center h-[60px]" style={{ flex: '0 1 360px' }}>
-              {/* Store selector row */}
               <div className="relative" ref={storePanelRef}>
                 <button
                   onClick={() => { setShowStorePanel(prev => !prev); setShowPartPanel(false); }}
-                  className={`w-full flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] transition-all duration-300 border shadow-sm ${
+                  className={`w-full flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] smooth-transition active:scale-[0.98] border shadow-sm ${
                     selectedStore
                       ? 'bg-emerald-50/90 border-emerald-200/60 text-emerald-800 hover:shadow-md'
                       : 'bg-white/60 border-white/80 text-slate-500 hover:bg-white hover:shadow-md'
@@ -248,7 +237,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                   {selectedStore && (
                     <span
                       onClick={handleClearStore}
-                      className="p-1 rounded-full hover:bg-emerald-200/60 transition-colors"
+                      className="p-1 rounded-full hover:bg-emerald-200/60 smooth-transition"
                     >
                       <X size={10} className="text-emerald-600" />
                     </span>
@@ -256,11 +245,10 @@ export const TopBar: React.FC<TopBarProps> = ({
                   <ChevronDown size={12} className={`transition-transform duration-300 shrink-0 ${showStorePanel ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* Store Dropdown */}
                 {showStorePanel && (
-                  <div className="absolute left-0 right-0 top-full mt-2 bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] border border-slate-100 z-[60] overflow-hidden transform opacity-100 scale-100 transition-all origin-top">
+                  <div className="glass-panel absolute left-0 right-0 top-full mt-2 bg-white/80 rounded-2xl z-[60] overflow-hidden origin-top animate-in fade-in slide-in-from-top-2">
                     <div className="p-2 border-b border-slate-100/60">
-                      <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+                      <div className="flex items-center gap-2 bg-slate-50/80 rounded-xl px-3 py-2 border border-slate-100">
                         <Search size={14} className="text-slate-400 shrink-0" />
                         <input
                           type="text"
@@ -287,8 +275,8 @@ export const TopBar: React.FC<TopBarProps> = ({
                             <button
                               key={store.code}
                               onClick={() => handleSelectStore(store)}
-                              className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                                isSelected ? 'bg-emerald-50/60' : 'hover:bg-slate-50'
+                              className={`w-full flex items-center gap-3 px-4 py-3 text-left smooth-transition active:bg-slate-200 ${
+                                isSelected ? 'bg-emerald-50/80' : 'hover:bg-slate-100/50'
                               }`}
                             >
                               <span className={`font-mono text-xs w-8 shrink-0 ${isSelected ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>
@@ -309,12 +297,11 @@ export const TopBar: React.FC<TopBarProps> = ({
                 )}
               </div>
 
-              {/* Part selector + action buttons row */}
               <div className="flex items-center gap-1.5">
                 <div className="flex-1 relative min-w-0" ref={partPanelRef}>
                   <button
                     onClick={() => { if (hasParts) { setShowPartPanel(prev => !prev); setShowStorePanel(false); } }}
-                    className={`w-full flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] transition-all duration-300 border shadow-sm ${
+                    className={`w-full flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] smooth-transition active:scale-[0.98] border shadow-sm ${
                       selectedPart
                         ? 'bg-blue-50/90 border-blue-200/60 text-blue-800 hover:shadow-md'
                         : hasParts
@@ -346,9 +333,8 @@ export const TopBar: React.FC<TopBarProps> = ({
                     )}
                   </button>
 
-                  {/* Part Dropdown */}
                   {showPartPanel && hasParts && (
-                    <div className="absolute left-0 right-0 top-full mt-2 bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] border border-slate-100 z-[60] overflow-hidden origin-top animate-in fade-in slide-in-from-top-2">
+                    <div className="glass-panel absolute left-0 right-0 top-full mt-2 bg-white/80 rounded-2xl z-[60] overflow-hidden origin-top animate-in fade-in slide-in-from-top-2">
                       <div className="max-h-[300px] overflow-y-auto custom-scrollbar py-1">
                         {storeParts!.map((part, idx) => {
                           const isSelected = selectedPartId === part.id;
@@ -356,8 +342,8 @@ export const TopBar: React.FC<TopBarProps> = ({
                             <button
                               key={part.id}
                               onClick={() => { onSelectPart?.(part.id); setShowPartPanel(false); }}
-                              className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                                isSelected ? 'bg-blue-50/60' : 'hover:bg-slate-50'
+                              className={`w-full flex items-center gap-3 px-4 py-3 text-left smooth-transition active:bg-slate-200 ${
+                                isSelected ? 'bg-blue-50/80' : 'hover:bg-slate-100/50'
                               }`}
                             >
                               <Layers size={14} className={isSelected ? 'text-blue-500' : 'text-slate-300'} />
@@ -381,11 +367,10 @@ export const TopBar: React.FC<TopBarProps> = ({
                   )}
                 </div>
 
-                {/* Load + Clear buttons */}
                 <button
                   onClick={onLoadPartLists}
                   disabled={!selectedPart}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] transition-all duration-300 border whitespace-nowrap shadow-sm ${
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] smooth-transition active:scale-95 border whitespace-nowrap shadow-sm ${
                     selectedPart
                       ? 'bg-indigo-600 hover:bg-indigo-700 hover:-translate-y-0.5 hover:shadow-md text-white border-indigo-600 cursor-pointer'
                       : 'bg-slate-100/50 text-slate-400 border-transparent cursor-not-allowed shadow-none'
@@ -396,7 +381,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 </button>
                 <button
                   onClick={onClearLists}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] transition-all duration-300 border bg-white/60 hover:bg-red-50 hover:-translate-y-0.5 hover:shadow-md text-slate-500 hover:text-red-600 border-white/80 hover:border-red-200 whitespace-nowrap shadow-sm"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] smooth-transition active:scale-95 border bg-white/60 hover:bg-red-50 hover:-translate-y-0.5 hover:shadow-md text-slate-500 hover:text-red-600 border-white/80 hover:border-red-200 whitespace-nowrap shadow-sm"
                 >
                   <Trash2 size={12} />
                   <span className="font-semibold">초기화</span>

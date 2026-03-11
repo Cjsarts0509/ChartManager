@@ -10,6 +10,7 @@ import { fetchCloudFiles, uploadToCloud, downloadFileAsBuffer, computeFileHash, 
 import { Store } from '../lib/constants';
 import { Toaster, toast } from 'sonner';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { motion } from 'framer-motion';
 
 function useIsMobile(breakpoint = 768) {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < breakpoint);
@@ -307,11 +308,10 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-    {/* 2026 트렌드: 클린 뉴모피즘 그라데이션 바탕색 적용 */}
-    <div className="h-screen w-screen bg-gradient-to-br from-slate-50 via-slate-100 to-gray-200 overflow-hidden flex flex-col font-sans main-desktop-wrapper text-slate-800">
+    <div className="h-screen w-screen bg-gradient-to-br from-indigo-50/50 via-purple-50/50 to-blue-50/50 overflow-hidden flex flex-col font-sans main-desktop-wrapper text-slate-800">
       <Toaster position="top-center" />
       
-      <div className="z-50 relative shadow-sm border-b border-white/50 topbar-wrapper">
+      <div className="z-50 relative topbar-wrapper">
         <TopBar 
           titleThisWeek={thisWeekData.title}
           titleLastWeek={lastWeekData.title}
@@ -333,11 +333,10 @@ export default function App() {
         />
       </div>
 
-      {/* 2026 트렌드: 은은한 캔버스 도트 패턴으로 공간감 부여 */}
       <div 
         className="flex-1 relative cursor-grab active:cursor-grabbing overflow-hidden canvas-area"
         style={{
-          backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(15, 23, 42, 0.04) 1px, transparent 0)',
+          backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(15, 23, 42, 0.05) 1px, transparent 0)',
           backgroundSize: '32px 32px'
         }}
         ref={canvasRef}
@@ -346,8 +345,7 @@ export default function App() {
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        {/* 2026 트렌드: 반투명 글래스모피즘(Glassmorphism) 힌트 박스 */}
-        <div className="absolute top-5 left-5 z-40 bg-white/60 backdrop-blur-md border border-white/40 shadow-sm text-slate-700 px-4 py-2 rounded-2xl text-xs font-medium pointer-events-none canvas-hint transition-all duration-300">
+        <div className="absolute top-5 left-5 z-40 glass-panel shadow-sm text-slate-700 px-4 py-2 rounded-2xl text-xs font-medium pointer-events-none canvas-hint transition-all duration-300">
           ✨ 휠: 상하 이동 | Ctrl + 휠: 확대/축소 | 드래그: 자유 이동
         </div>
 
@@ -363,10 +361,13 @@ export default function App() {
           className={`canvas-content ${printingId ? "print:transform-none print:static" : ""}`}
         >
           {lists.map(list => (
-            // 2026 트렌드: 호버 입체감(Hover-based Reveal)과 마이크로 인터랙션
-            <div 
+            <motion.div 
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
               key={list.id} 
-              className={`list-wrapper transition-all duration-500 ease-out hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] rounded-[2rem] bg-white/40 backdrop-blur-sm border border-white/60 p-2 ${printingId && printingId !== list.id ? "print:hidden" : "print:block"}`}
+              className={`list-wrapper smooth-transition hover:-translate-y-2 hover:shadow-2xl rounded-[2rem] p-2 ${printingId && printingId !== list.id ? "print:hidden" : "print:block"}`}
             >
               <ListCard 
                 id={list.id}
@@ -383,7 +384,7 @@ export default function App() {
                 defaultGroupCode={list.defaultGroupCode}
                 defaultLimit={list.defaultLimit}
               />
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
