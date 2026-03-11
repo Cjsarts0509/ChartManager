@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
+import { createPortal } from 'react-dom';
 import { BookWithTrend } from '../lib/types';
 import { ShelfInfoMap, ShelfResult, fetchShelfInfo, clearShelfCache, getShelfFromCache, clearShelfCacheForIsbn, getEjkGb } from '../../lib/cloud';
 import { Minus, Loader2 } from 'lucide-react';
@@ -24,6 +25,32 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
   // ISBN 복사 토스트 (PC 전용)
   const [copiedIsbn, setCopiedIsbn] = useState<{ isbn: string; x: number; y: number } | null>(null);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ISBN 복사 토스트 — createPortal로 body에 렌더 (transform 컨테이너 회피)
+  const isbnToastPortal = copiedIsbn ? createPortal(
+    <>
+      <div
+        className="fixed z-[9999] pointer-events-none"
+        style={{ left: copiedIsbn.x, top: copiedIsbn.y - 40 }}
+      >
+        <div
+          className="px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-medium shadow-lg whitespace-nowrap -translate-x-1/2"
+          style={{ animation: 'isbnToastFade 0.8s ease-in-out forwards' }}
+        >
+          {copiedIsbn.isbn} 복사됨
+        </div>
+      </div>
+      <style>{`
+        @keyframes isbnToastFade {
+          0% { opacity: 0; transform: translateX(-50%) translateY(4px); }
+          15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+          70% { opacity: 1; transform: translateX(-50%) translateY(0); }
+          100% { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+        }
+      `}</style>
+    </>,
+    document.body
+  ) : null;
 
   const handleIsbnClick = useCallback((book: BookWithTrend, e: React.MouseEvent) => {
     if (isMobile) {
@@ -383,30 +410,7 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
         )}
 
         {/* ISBN 복사 토스트 (PC) */}
-        {copiedIsbn && (
-          <div
-            className="fixed z-[9999] pointer-events-none"
-            style={{ left: copiedIsbn.x, top: copiedIsbn.y - 40 }}
-          >
-            <div
-              className="px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-medium shadow-lg whitespace-nowrap -translate-x-1/2"
-              style={{
-                animation: 'isbnToastFade 0.8s ease-in-out forwards',
-              }}
-            >
-              {copiedIsbn.isbn} 복사됨
-            </div>
-          </div>
-        )}
-
-        <style>{`
-          @keyframes isbnToastFade {
-            0% { opacity: 0; transform: translateX(-50%) translateY(4px); }
-            15% { opacity: 1; transform: translateX(-50%) translateY(0); }
-            70% { opacity: 1; transform: translateX(-50%) translateY(0); }
-            100% { opacity: 0; transform: translateX(-50%) translateY(-6px); }
-          }
-        `}</style>
+        {isbnToastPortal}
       </>
     );
   }
@@ -561,6 +565,9 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
           onClose={() => setSelectedBookForCover(null)}
         />
       )}
+
+      {/* ISBN 복사 토스트 (PC) */}
+      {isbnToastPortal}
     </>
   );
 });
