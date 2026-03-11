@@ -82,8 +82,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   const lastWeekCloud = cloudInfo?.lastWeek;
   const hasParts = storeParts && storeParts.length > 0;
 
-  // Fluent Design 그라데이션 버튼 공통 클래스
-  const fluentBtnBase = "flex flex-col items-center justify-center border text-white w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-lg disabled:opacity-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)]";
+  // Fluent Design 공통 버튼 클래스 (채도만 낮아지게 disabled 처리)
+  const fluentBtnBase = "flex flex-col items-center justify-center border text-white w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-lg shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] disabled:opacity-60 disabled:saturate-50 disabled:pointer-events-none";
 
   return (
     <div className="glass-panel print:hidden relative z-50">
@@ -138,7 +138,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
             <div className="flex flex-col gap-1 min-w-0 justify-center h-[60px]" style={{ flex: '0 1 360px' }}>
               <div className="relative h-[28px]" ref={storePanelRef}>
-                <button onClick={() => { setShowStorePanel(prev => !prev); setShowPartPanel(false); }} className={`w-full h-full flex items-center gap-1.5 px-3 rounded-xl text-[11px] font-bold smooth-transition active:scale-[0.98] border shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] ${selectedStore ? 'bg-gradient-to-b from-emerald-500 to-emerald-600 border-emerald-700/50 hover:from-emerald-400 hover:to-emerald-500 text-white' : 'bg-gradient-to-b from-slate-500 to-slate-600 border-slate-700/50 hover:from-slate-400 hover:to-slate-500 text-white'}`}>
+                <button onClick={() => { setShowStorePanel(prev => !prev); setShowPartPanel(false); }} className={`w-full h-full flex items-center gap-1.5 px-3 rounded-xl text-[11px] font-bold smooth-transition active:scale-[0.98] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] border bg-gradient-to-b from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 border-emerald-700/50 text-white ${!selectedStore && 'opacity-60 saturate-50'}`}>
                   <MapPin size={12} className="text-white/80" />
                   {selectedStore ? <span className="flex-1 text-left truncate font-bold"><span className="text-emerald-200 font-mono mr-1.5">{selectedStore.code}</span>{selectedStore.name}</span> : <span className="flex-1 text-left font-bold">영업점 선택</span>}
                   {selectedStore && <span onClick={handleClearStore} className="p-1 rounded-full hover:bg-white/20 smooth-transition"><X size={10} className="text-white" /></span>}
@@ -165,8 +165,8 @@ export const TopBar: React.FC<TopBarProps> = ({
 
               <div className="flex items-center gap-1.5 h-[28px]">
                 <div className="flex-1 relative min-w-0 h-full" ref={partPanelRef}>
-                  <button onClick={() => { if (hasParts) { setShowPartPanel(prev => !prev); setShowStorePanel(false); } }} className={`w-full h-full flex items-center gap-1.5 px-3 rounded-xl text-[11px] font-bold smooth-transition active:scale-[0.98] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] border ${selectedPart ? 'bg-gradient-to-b from-blue-500 to-blue-600 border-blue-700/50 hover:from-blue-400 hover:to-blue-500 text-white' : hasParts ? 'bg-gradient-to-b from-slate-500 to-slate-600 border-slate-700/50 hover:from-slate-400 hover:to-slate-500 text-white' : 'bg-slate-300 text-slate-500 cursor-default shadow-none border-transparent'}`}>
-                    <Layers size={12} className={selectedPart || hasParts ? 'text-white/80' : 'text-slate-400'} />
+                  <button disabled={!hasParts} onClick={() => { setShowPartPanel(prev => !prev); setShowStorePanel(false); }} className={`w-full h-full flex items-center gap-1.5 px-3 rounded-xl text-[11px] font-bold smooth-transition active:scale-[0.98] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] border bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 border-blue-700/50 text-white disabled:opacity-60 disabled:saturate-50 disabled:pointer-events-none`}>
+                    <Layers size={12} className="text-white/80" />
                     {selectedPart ? <span className="flex-1 text-left truncate font-bold">{selectedPart.name}<span className="text-blue-100 ml-1.5 text-[9px] bg-blue-800/50 px-1 py-0.5 rounded-md">{selectedPart.categories.length}개</span></span> : <span className="flex-1 text-left truncate font-bold">{!selectedStore ? '영업점 먼저 선택' : hasParts ? '파트 선택' : '파트 없음'}</span>}
                     {selectedPart && <span onClick={(e) => { e.stopPropagation(); onSelectPart?.(null); }} className="p-1 rounded-full hover:bg-white/20 transition-colors"><X size={10} className="text-white" /></span>}
                     {hasParts && <ChevronDown size={12} className={`transition-transform duration-300 shrink-0 ${showPartPanel ? 'rotate-180' : ''}`} />}
@@ -186,8 +186,9 @@ export const TopBar: React.FC<TopBarProps> = ({
                     </div>
                   )}
                 </div>
-                <button onClick={onLoadPartLists} disabled={!selectedPart} className={`flex items-center gap-1 px-2.5 h-full rounded-xl text-[10px] smooth-transition active:scale-95 whitespace-nowrap shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] border font-bold ${selectedPart ? 'bg-gradient-to-b from-blue-500 to-blue-600 border-blue-700/50 hover:from-blue-400 hover:to-blue-500 text-white' : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none border-transparent'}`}><Download size={12} /><span>불러오기</span></button>
-                <button onClick={onClearLists} className="flex items-center gap-1 px-2.5 h-full rounded-xl text-[10px] smooth-transition active:scale-95 whitespace-nowrap shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] border font-bold bg-gradient-to-b from-lime-500 to-lime-600 hover:from-lime-400 hover:to-lime-500 border-lime-700/50 text-white"><Trash2 size={12} /><span>초기화</span></button>
+                {/* 화이트-그레이 그라데이션 + 다크 텍스트 처리 */}
+                <button onClick={onLoadPartLists} disabled={!selectedPart} className="flex items-center gap-1 px-2.5 h-full rounded-xl text-[10px] smooth-transition active:scale-95 whitespace-nowrap shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_2px_4px_rgba(0,0,0,0.05)] border border-gray-200 bg-gradient-to-b from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 text-gray-800 font-bold disabled:opacity-60 disabled:saturate-50 disabled:pointer-events-none"><Download size={12} /><span>불러오기</span></button>
+                <button onClick={onClearLists} className="flex items-center gap-1 px-2.5 h-full rounded-xl text-[10px] smooth-transition active:scale-95 whitespace-nowrap shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_2px_4px_rgba(0,0,0,0.05)] border border-gray-200 bg-gradient-to-b from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 text-gray-800 font-bold disabled:opacity-60 disabled:saturate-50 disabled:pointer-events-none"><Trash2 size={12} /><span>초기화</span></button>
               </div>
             </div>
         </div>
