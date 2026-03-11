@@ -1,257 +1,420 @@
-import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { BookWithTrend } from '../lib/types';
-import { ShelfInfoMap, ShelfResult, fetchShelfInfo, clearShelfCache, getShelfFromCache, clearShelfCacheForIsbn, getEjkGb } from '../../lib/cloud';
-import { Minus, Loader2 } from 'lucide-react';
-import { clsx } from 'clsx';
-import { BookCoverModal } from './BookCoverModal';
+import { useEditor, EditorContent, Extension } from '@tiptap/react';
+import { StarterKit } from '@tiptap/starter-kit';
+import { Table } from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
+import ImageExt from '@tiptap/extension-image';
+import Color from '@tiptap/extension-color';
+import { TextStyle } from '@tiptap/extension-text-style';
+import Underline from '@tiptap/extension-underline';
+import TextAlign from '@tiptap/extension-text-align';
+import Highlight from '@tiptap/extension-highlight';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  X, Plus, Trash2, Bold, Italic, Underline as UnderlineIcon,
+  Strikethrough, AlignLeft, AlignCenter, AlignRight,
+  List, ListOrdered, Image, Table as TableIcon,
+  Heading1, Heading2, Heading3, Undo2, Redo2,
+  Highlighter, Loader2, Lock, Pencil, Bell
+} from 'lucide-react';
+import { projectId, publicAnonKey } from '/utils/supabase/info';
 
-interface BookTableProps {
-  books: BookWithTrend[];
-  storeCode?: string;
-  storeName?: string;
-  showShelfRow?: boolean;
+const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-22196a99`;
+
+interface Notice {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
-export interface BookTableRef {
-  fetchAllShelves: () => Promise<void>;
+const FontSize = Extension.create({
+  name: 'fontSize',
+  addOptions() { return { types: ['textStyle'] }; },
+  addGlobalAttributes() {
+    return [{
+      types: this.options.types,
+      attributes: {
+        fontSize: {
+          default: null,
+          parseHTML: element => element.style.fontSize?.replace(/['"]+/g, ''),
+          renderHTML: attributes => {
+            if (!attributes.fontSize) return {};
+            return { style: `font-size: ${attributes.fontSize}` };
+          },
+        },
+      },
+    }];
+  },
+  addCommands() {
+    return {
+      setFontSize: fontSize => ({ chain }) => chain().setMark('textStyle', { fontSize }).run(),
+      unsetFontSize: () => ({ chain }) => chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run(),
+    };
+  },
+});
+
+async function safeJson(res: Response): Promise<any> {
+  const text = await res.text();
+  try { return JSON.parse(text); } 
+  catch { throw new Error(`서버 응답 오류 (${res.status})`); }
 }
 
-export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, storeCode, storeName, showShelfRow }, ref) => {
-  const [selectedBookForCover, setSelectedBookForCover] = useState<BookWithTrend | null>(null);
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
-  const [copiedIsbn, setCopiedIsbn] = useState<{ isbn: string; x: number; y: number } | null>(null);
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+async function fetchNotices(): Promise<Notice[]> {
+  const res = await fetch(`${API_BASE}/notices`, { headers: { Authorization: `Bearer ${publicAnonKey}` } });
+  const data = await safeJson(res);
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch notices');
+  return data.notices || [];
+}
 
-  const isbnToastPortal = copiedIsbn ? createPortal(
-    <>
-      <div className="fixed z-[9999] pointer-events-none" style={{ left: copiedIsbn.x, top: copiedIsbn.y - 40 }}>
-        <div className="glass-panel px-3 py-1.5 rounded-xl bg-gray-900/80 text-white text-xs font-medium shadow-lg whitespace-nowrap -translate-x-1/2" style={{ animation: 'isbnToastFade 0.8s ease-in-out forwards' }}>
-          {copiedIsbn.isbn} 복사됨
+async function createNotice(password: string, title: string, content: string): Promise<Notice> {
+  const res = await fetch(`${API_BASE}/notices`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${publicAnonKey}` },
+    body: JSON.stringify({ password, title, content }),
+  });
+  const data = await safeJson(res);
+  if (!res.ok) throw new Error(data.error || '등록 실패');
+  return data.notice;
+}
+
+async function updateNotice(id: string, password: string, title: string, content: string): Promise<Notice> {
+  const res = await fetch(`${API_BASE}/notices/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${publicAnonKey}` },
+    body: JSON.stringify({ password, title, content }),
+  });
+  const data = await safeJson(res);
+  if (!res.ok) throw new Error(data.error || '수정 실패');
+  return data.notice;
+}
+
+async function deleteNotice(id: string, password: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/notices/${id}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${publicAnonKey}` },
+    body: JSON.stringify({ password }),
+  });
+  const data = await safeJson(res);
+  if (!res.ok) throw new Error(data.error || '삭제 실패');
+}
+
+function PasswordDialog({ onConfirm, onCancel, title }: {
+  onConfirm: (pw: string) => void;
+  onCancel: () => void;
+  title: string;
+}) {
+  const [pw, setPw] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onCancel}>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="glass-panel bg-white/95 rounded-2xl p-5 w-[320px]" 
+        onClick={e => e.stopPropagation()} 
+        data-no-drag
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <Lock size={16} className="text-gray-500" />
+          <h3 className="font-bold text-sm text-gray-800">{title}</h3>
         </div>
-      </div>
-      <style>{`@keyframes isbnToastFade { 0% { opacity: 0; transform: translateX(-50%) translateY(4px); } 15%, 70% { opacity: 1; transform: translateX(-50%) translateY(0); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px); } }`}</style>
-    </>,
+        <input
+          ref={inputRef}
+          type="password"
+          value={pw}
+          onChange={e => setPw(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && pw && onConfirm(pw)}
+          placeholder="암호를 입력하세요"
+          className="w-full border border-gray-200/50 rounded-xl px-3 py-2 text-sm mb-3 outline-none focus:ring-2 focus:ring-blue-300 bg-white/80"
+        />
+        <div className="flex justify-end gap-2">
+          <button onClick={onCancel} className="px-4 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-lg smooth-transition active:scale-95">취소</button>
+          <button
+            onClick={() => pw && onConfirm(pw)}
+            disabled={!pw}
+            className="px-4 py-1.5 text-xs bg-blue-600/90 backdrop-blur-sm text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 smooth-transition active:scale-95"
+          >확인</button>
+        </div>
+      </motion.div>
+    </div>,
     document.body
-  ) : null;
+  );
+}
 
-  const handleIsbnClick = useCallback((book: BookWithTrend, e: React.MouseEvent) => {
-    if (isMobile) { setSelectedBookForCover(book); return; }
-    const clean = book.isbn.replace(/[-\s]/g, '');
-    navigator.clipboard.writeText(clean).catch(() => {
-      const ta = document.createElement('textarea'); ta.value = clean; ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-    });
-    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
-    setCopiedIsbn({ isbn: clean, x: e.clientX, y: e.clientY });
-    copiedTimerRef.current = setTimeout(() => setCopiedIsbn(null), 800);
-  }, [isMobile]);
+const COLORS = [
+  '#000000', '#434343', '#666666', '#999999', '#cccccc',
+  '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6',
+  '#8b5cf6', '#ec4899', '#14b8a6', '#0ea5e9', '#6366f1',
+];
 
-  const [shelfInfo, setShelfInfo] = useState<ShelfInfoMap>({});
-  const [loadingIsbns, setLoadingIsbns] = useState<Set<string>>(new Set());
-  const [expandedIsbns, setExpandedIsbns] = useState<Set<string>>(new Set());
-  const prevStoreRef = useRef(storeCode);
+function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
+  const [showColor, setShowColor] = useState(false);
+  const [showHighlight, setShowHighlight] = useState(false);
+  if (!editor) return null;
+
+  const Btn = ({ active, onClick, children, title }: { active?: boolean; onClick: () => void; children: React.ReactNode; title?: string }) => (
+    <button type="button" onClick={onClick} title={title} className={`p-1 rounded smooth-transition active:scale-95 ${active ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200/50'}`}>
+      {children}
+    </button>
+  );
+
+  const addImage = () => { const url = prompt('이미지 URL을 입력하세요:'); if (url) editor.chain().focus().setImage({ src: url }).run(); };
+  const addTable = () => { editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(); };
+  const closeAllPopups = () => { setShowColor(false); setShowHighlight(false); };
+
+  return (
+    <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-white/80 border-b border-gray-100/50 rounded-t-xl relative">
+      <Btn onClick={() => editor.chain().focus().undo().run()} title="실행취소"><Undo2 size={14} /></Btn>
+      <Btn onClick={() => editor.chain().focus().redo().run()} title="다시실행"><Redo2 size={14} /></Btn>
+      <div className="w-px h-4 bg-gray-300 mx-1" />
+      <Btn active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="제목1"><Heading1 size={14} /></Btn>
+      <Btn active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="제목2"><Heading2 size={14} /></Btn>
+      <Btn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="제목3"><Heading3 size={14} /></Btn>
+      <div className="w-px h-4 bg-gray-300 mx-1" />
+      
+      <div className="flex items-center border border-gray-200/50 bg-white/90 rounded shadow-sm overflow-hidden h-[26px]">
+        <button type="button" onClick={() => { closeAllPopups(); const current = editor.getAttributes('textStyle').fontSize || '16px'; const num = parseInt(current, 10); editor.chain().focus().setFontSize(`${Math.max(10, num - 2)}px`).run(); }} title="글자 작게 (-2px)" className="px-2.5 h-full text-gray-600 hover:bg-gray-200 font-bold text-[11px] flex items-center justify-center smooth-transition active:bg-gray-300">A-</button>
+        <div className="w-px h-4 bg-gray-300" />
+        <button type="button" onClick={() => { closeAllPopups(); const current = editor.getAttributes('textStyle').fontSize || '16px'; const num = parseInt(current, 10); editor.chain().focus().setFontSize(`${Math.min(60, num + 2)}px`).run(); }} title="글자 크게 (+2px)" className="px-2.5 h-full text-gray-600 hover:bg-gray-200 font-bold text-[14px] flex items-center justify-center smooth-transition active:bg-gray-300">A+</button>
+      </div>
+
+      <div className="w-px h-4 bg-gray-300 mx-1" />
+      <Btn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} title="굵게"><Bold size={14} /></Btn>
+      <Btn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title="기울임"><Italic size={14} /></Btn>
+      <Btn active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} title="밑줄"><UnderlineIcon size={14} /></Btn>
+      <Btn active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()} title="취소선"><Strikethrough size={14} /></Btn>
+      <div className="w-px h-4 bg-gray-300 mx-1" />
+
+      <div className="relative">
+        <Btn onClick={() => { closeAllPopups(); setShowColor(!showColor); }} title="글자색">
+          <div className="flex flex-col items-center"><span className="text-[10px] font-bold leading-none">A</span><div className="w-3 h-1 rounded-sm mt-px" style={{ backgroundColor: editor.getAttributes('textStyle').color || '#000' }} /></div>
+        </Btn>
+        {showColor && (
+          <div className="glass-panel absolute top-full left-0 mt-1 z-[100] bg-white/95 rounded-xl p-2 grid grid-cols-5 gap-1.5 w-[140px]">
+            {COLORS.map(c => <button key={c} className="w-5 h-5 rounded-full border border-gray-200 hover:scale-125 smooth-transition" style={{ backgroundColor: c }} onClick={() => { editor.chain().focus().setColor(c).run(); setShowColor(false); }} />)}
+          </div>
+        )}
+      </div>
+
+      <div className="relative">
+        <Btn active={editor.isActive('highlight')} onClick={() => { closeAllPopups(); setShowHighlight(!showHighlight); }} title="형광펜"><Highlighter size={14} /></Btn>
+        {showHighlight && (
+          <div className="glass-panel absolute top-full left-0 mt-1 z-[100] bg-white/95 rounded-xl p-2 grid grid-cols-4 gap-1.5 w-[120px]">
+            {['#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff', '#fed7aa'].map(c => <button key={c} className="w-5 h-5 rounded-full border border-gray-200 hover:scale-125 smooth-transition" style={{ backgroundColor: c }} onClick={() => { editor.chain().focus().toggleHighlight({ color: c }).run(); setShowHighlight(false); }} />)}
+            <button className="w-5 h-5 rounded-full border border-gray-300 text-[9px] hover:scale-125 smooth-transition flex items-center justify-center font-bold text-gray-500" onClick={() => { editor.chain().focus().unsetHighlight().run(); setShowHighlight(false); }}>X</button>
+          </div>
+        )}
+      </div>
+
+      <div className="w-px h-4 bg-gray-300 mx-1" />
+      <Btn active={editor.isActive({ textAlign: 'left' })} onClick={() => editor.chain().focus().setTextAlign('left').run()} title="왼쪽정렬"><AlignLeft size={14} /></Btn>
+      <Btn active={editor.isActive({ textAlign: 'center' })} onClick={() => editor.chain().focus().setTextAlign('center').run()} title="가운데정렬"><AlignCenter size={14} /></Btn>
+      <Btn active={editor.isActive({ textAlign: 'right' })} onClick={() => editor.chain().focus().setTextAlign('right').run()} title="오른쪽정렬"><AlignRight size={14} /></Btn>
+      <div className="w-px h-4 bg-gray-300 mx-1" />
+      <Btn active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()} title="목록"><List size={14} /></Btn>
+      <Btn active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="번호목록"><ListOrdered size={14} /></Btn>
+      <div className="w-px h-4 bg-gray-300 mx-1" />
+      <Btn onClick={addTable} title="표 삽입"><TableIcon size={14} /></Btn>
+      <Btn onClick={addImage} title="이미지 삽입"><Image size={14} /></Btn>
+
+      {editor.isActive('table') && (
+        <div className="flex gap-1 ml-auto">
+          <button onClick={() => editor.chain().focus().addColumnAfter().run()} className="text-[10px] px-1.5 py-0.5 bg-blue-50/80 text-blue-700 rounded smooth-transition hover:bg-blue-100">열+</button>
+          <button onClick={() => editor.chain().focus().deleteColumn().run()} className="text-[10px] px-1.5 py-0.5 bg-red-50/80 text-red-600 rounded smooth-transition hover:bg-red-100">열-</button>
+          <button onClick={() => editor.chain().focus().addRowAfter().run()} className="text-[10px] px-1.5 py-0.5 bg-blue-50/80 text-blue-700 rounded smooth-transition hover:bg-blue-100">행+</button>
+          <button onClick={() => editor.chain().focus().deleteRow().run()} className="text-[10px] px-1.5 py-0.5 bg-red-50/80 text-red-600 rounded smooth-transition hover:bg-red-100">행-</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WriteDialog({ initialData, onSave, onCancel, saving }: {
+  initialData?: Notice | null;
+  onSave: (title: string, content: string) => void;
+  onCancel: () => void;
+  saving: boolean;
+}) {
+  const [title, setTitle] = useState(initialData?.title || '');
+  const editor = useEditor({
+    extensions: [
+      StarterKit, Underline, TextStyle, Color, FontSize,
+      Highlight.configure({ multicolor: true }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      Table.configure({ resizable: true }), TableRow, TableCell, TableHeader,
+      ImageExt.configure({ inline: true, allowBase64: true }),
+    ],
+    content: initialData?.content || '<p></p>',
+    editorProps: {
+      attributes: { class: 'prose prose-sm max-w-none focus:outline-none min-h-[350px] px-5 py-4 bg-white/80 rounded-b-xl' },
+    },
+  });
+
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <motion.div initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
+        className="glass-panel bg-white/95 backdrop-blur-2xl rounded-2xl w-[90vw] max-w-[750px] max-h-[90vh] flex flex-col overflow-hidden shadow-[0_20px_40px_rgba(0,0,0,0.15)]"
+        onClick={e => e.stopPropagation()} data-no-drag
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200/50 bg-white/90">
+          <h2 className="font-bold text-base text-gray-800">{initialData ? '게시글 수정' : '게시글 작성'}</h2>
+          <button onClick={onCancel} className="p-1.5 hover:bg-gray-100 rounded-full smooth-transition"><X size={18} /></button>
+        </div>
+        <div className="px-5 pt-4 bg-white/60">
+          <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="제목을 입력하세요" className="w-full text-lg font-semibold border-b border-gray-200/50 pb-2 outline-none focus:border-blue-500 bg-transparent placeholder-gray-400 smooth-transition" />
+        </div>
+        <div className="flex flex-col flex-1 mx-5 mt-4 mb-4 border border-gray-200/50 rounded-xl min-h-0 bg-white/90 shadow-sm">
+          <div className="shrink-0"><EditorToolbar editor={editor} /></div>
+          <div className="flex-1 overflow-auto custom-scrollbar"><EditorContent editor={editor} /></div>
+        </div>
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200/50 bg-white/90 shrink-0">
+          <button onClick={onCancel} className="px-5 py-2 text-sm text-gray-600 hover:bg-gray-200/80 rounded-xl smooth-transition active:scale-95 font-medium">취소</button>
+          <button onClick={() => { if (!title.trim()) { alert('제목을 입력해주세요.'); return; } if (!editor?.getHTML() || editor.isEmpty) { alert('내용을 입력해주세요.'); return; } onSave(title.trim(), editor.getHTML()); }} disabled={saving || !title.trim()} className="px-6 py-2 text-sm bg-blue-600/90 backdrop-blur-sm text-white rounded-xl hover:bg-blue-700 disabled:opacity-40 flex items-center gap-1.5 font-bold smooth-transition active:scale-95">
+            {saving && <Loader2 size={14} className="animate-spin" />} 저장
+          </button>
+        </div>
+      </motion.div>
+    </div>,
+    document.body
+  );
+}
+
+function ViewDialog({ notice, onClose, onEdit, onDelete }: {
+  notice: Notice;
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const formatDate = (iso: string) => {
+    const d = new Date(iso); return `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <motion.div initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
+        className="glass-panel bg-white/95 backdrop-blur-2xl rounded-2xl w-[90vw] max-w-[700px] max-h-[85vh] flex flex-col overflow-hidden shadow-[0_20px_40px_rgba(0,0,0,0.15)]"
+        onClick={e => e.stopPropagation()} data-no-drag
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200/50 bg-white/90">
+          <div className="flex-1 min-w-0 pr-4">
+            <h2 className="font-bold text-lg text-gray-800 truncate mb-1">{notice.title}</h2>
+            <div className="text-xs text-gray-500">{formatDate(notice.createdAt)}{notice.updatedAt && <span className="ml-2 pl-2 border-l border-gray-300">수정됨: {formatDate(notice.updatedAt)}</span>}</div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={onEdit} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-indigo-50/80 text-indigo-600 hover:bg-indigo-100 rounded-xl border border-indigo-200/50 smooth-transition active:scale-95 font-medium"><Pencil size={13} />수정</button>
+            <button onClick={onDelete} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-50/80 text-red-600 hover:bg-red-100 rounded-xl border border-red-200/50 smooth-transition active:scale-95 font-medium"><Trash2 size={13} />삭제</button>
+            <div className="w-px h-4 bg-gray-300 mx-1"></div>
+            <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-full smooth-transition"><X size={18} /></button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-auto px-6 py-6 custom-scrollbar bg-white/80">
+          <div className="prose prose-sm max-w-none notice-content" dangerouslySetInnerHTML={{ __html: notice.content }} />
+        </div>
+      </motion.div>
+    </div>,
+    document.body
+  );
+}
+
+export interface InlineNoticePanelProps { className?: string; }
+
+export const InlineNoticePanel: React.FC<InlineNoticePanelProps> = ({ className }) => {
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showWrite, setShowWrite] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [viewNotice, setViewNotice] = useState<Notice | null>(null);
+  const [editData, setEditData] = useState<Notice | null>(null);
+  const [pwDialog, setPwDialog] = useState<{ action: 'write' | 'edit' | 'delete'; payload?: any } | null>(null);
+  const [showPopover, setShowPopover] = useState(false);
+  
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const pendingPw = useRef<string | null>(null);
 
   useEffect(() => {
-    if (prevStoreRef.current !== storeCode) {
-      prevStoreRef.current = storeCode; setShelfInfo({}); setExpandedIsbns(new Set()); setLoadingIsbns(new Set()); clearShelfCache();
-    }
-  }, [storeCode]);
-
-  useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handler); return () => window.removeEventListener('resize', handler);
+    const handleClickOutside = (e: MouseEvent) => { if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) { setShowPopover(false); } };
+    document.addEventListener('mousedown', handleClickOutside); return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const desktopGridTemplate = "4.63fr 14.13fr 30.63fr 5fr";
-  const showShelf = isMobile && !!storeCode && !!showShelfRow;
+  const load = useCallback(async () => { setLoading(true); try { const list = await fetchNotices(); setNotices(list); } catch (e) { console.error('Notice load error:', e); } finally { setLoading(false); } }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const fetchSingleShelf = useCallback(async (isbn: string) => {
-    if (!storeCode || shelfInfo[isbn] !== undefined) return;
-    setLoadingIsbns(prev => new Set([...prev, isbn]));
-    try { const result = await fetchShelfInfo(storeCode, [isbn]); setShelfInfo(prev => ({ ...prev, ...result })); } 
-    catch (e) { setShelfInfo(prev => ({ ...prev, [isbn]: null })); } 
-    finally { setLoadingIsbns(prev => { const next = new Set(prev); next.delete(isbn); return next; }); }
-  }, [storeCode, shelfInfo]);
+  const handleWriteClick = () => { setShowPopover(false); setEditData(null); setPwDialog({ action: 'write' }); };
+  const handleEditClick = () => { if (!viewNotice) return; setPwDialog({ action: 'edit', payload: viewNotice }); };
+  const handleDeleteClick = () => { if (!viewNotice) return; setPwDialog({ action: 'delete', payload: viewNotice.id }); };
 
-  const handleTitleClick = useCallback(async (book: BookWithTrend) => {
-    if (!storeCode) return;
-    if (!isMobile) { openKioskWindow(book); return; }
-    if (!showShelfRow) return;
-    if (expandedIsbns.has(book.isbn)) { openKioskWindow(book); return; }
-    setExpandedIsbns(prev => new Set([...prev, book.isbn])); fetchSingleShelf(book.isbn);
-  }, [storeCode, isMobile, showShelfRow, expandedIsbns, fetchSingleShelf]);
-
-  useImperativeHandle(ref, () => ({
-    // Promise 반환하도록 변경하여 MobileView.tsx에서 await 적용이 가능하도록 했습니다.
-    fetchAllShelves: async () => {
-      if (!storeCode || !showShelfRow) return;
-      const isbns = books.map(b => b.isbn);
-      setExpandedIsbns(new Set(isbns));
-      const uncached = isbns.filter(isbn => shelfInfo[isbn] === undefined);
-      if (uncached.length === 0) return;
-      const sc = storeCode;
-
-      for (let i = 0; i < uncached.length; i++) {
-        await fetchSingleShelf(uncached[i]);
-        if (i < uncached.length - 1) await new Promise(r => setTimeout(r, 300 + Math.random() * 500));
-      }
-      const failed = uncached.filter(isbn => getShelfFromCache(sc, isbn) === null);
-      if (failed.length === 0) return;
-      
-      for (let i = 0; i < failed.length; i++) {
-        clearShelfCacheForIsbn(sc, failed[i]);
-        setShelfInfo(prev => { const next = { ...prev }; delete next[failed[i]]; return next; });
-        await fetchSingleShelf(failed[i]);
-        if (i < failed.length - 1) await new Promise(r => setTimeout(r, 300 + Math.random() * 500));
-      }
-    },
-  }), [storeCode, showShelfRow, books, shelfInfo, fetchSingleShelf]);
-
-  const openKioskWindow = (book: BookWithTrend) => {
-    if (!storeCode) return;
-    const cleanIsbn = book.isbn.replace(/[-\s]/g, '');
-    const kioskUrl = `https://kiosk.kyobobook.co.kr/bookInfoInk?site=${storeCode}&barcode=${cleanIsbn}&ejkGb=${getEjkGb(cleanIsbn)}`;
-    const newWin = window.open('', `kiosk_${cleanIsbn}`, `width=540,height=${Math.min(window.screen.availHeight - 100, 900)},left=${window.screenX + Math.round((window.outerWidth - 540) / 2)},top=${window.screenY + 50},scrollbars=yes,resizable=yes`);
-    if (!newWin) return alert('팝업이 차단되었습니다.');
-    const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${book.title}</title><style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;overflow:hidden;background:#fff}iframe{width:100%;height:100%;border:none;display:block}.print-btn{position:fixed;bottom:12px;right:12px;z-index:999;width:36px;height:36px;border-radius:50%;border:none;background:#2563eb;color:#fff;font-size:16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;opacity:0.7;transition:opacity 0.2s}.print-btn:hover{opacity:1}@media print{.print-btn{display:none}}</style></head><body><button class="print-btn" onclick="window.print()" title="인쇄">&#x1F5A8;</button><iframe src="${kioskUrl}" sandbox="allow-scripts allow-same-origin allow-popups"></iframe></body></html>`;
-    newWin.document.write(html); newWin.document.close();
+  const handleSave = async (title: string, content: string) => {
+    const pw = pendingPw.current; if (!pw) return; setSaving(true);
+    try { if (editData) await updateNotice(editData.id, pw, title, content); else await createNotice(pw, title, content); pendingPw.current = null; setShowWrite(false); await load(); } catch (e: any) { alert(e.message || '저장 실패'); } finally { setSaving(false); }
   };
 
-  const renderShelfCard = (shelf: ShelfResult | null | undefined, index: number, trend: string, isLoading: boolean) => {
-    const isNew = trend === 'new';
-    const isOut = trend === 'out';
-    const isHighlight = isNew || isOut;
-
-    if (isLoading) return <div className={clsx("flex items-center justify-center h-full gap-1", isHighlight ? "text-white/60" : "text-gray-400")}><Loader2 size={10} className="animate-spin" /><span className="text-[8px]">조회중</span></div>;
-    const loc = shelf?.locations?.[index];
-    if (!loc) return <span className={clsx("text-[8px]", isHighlight ? "text-white/40" : "text-gray-300")}>-</span>;
-
-    return (
-      <div className={clsx("rounded-lg px-1.5 py-1 text-[8px] leading-tight border w-full smooth-transition shadow-sm",
-        isNew ? "bg-[#c8d8eb] border-[#a3bcd8] text-[#1a3a5c]" : 
-        isOut ? "bg-[#fca5a5] border-[#f87171] text-[#450a0a]" : // 이전주(OUT) 서가 붉은색 테마
-        "bg-white/80 border-[#d5cfc6] text-[#4a3f35]"
-      )}>
-        <div className="font-bold whitespace-normal break-words">{loc.location}</div>
-        {loc.category && <div className={clsx("whitespace-normal break-words mt-px", isNew ? "text-[#3a6494]" : isOut ? "text-[#7f1d1d]" : "text-[#8a7e72]")}>{loc.category}</div>}
-      </div>
-    );
+  const handlePwConfirm = async (pw: string) => {
+    const action = pwDialog?.action; const payload = pwDialog?.payload; setPwDialog(null);
+    if (action === 'write') { pendingPw.current = pw; setEditData(null); setShowWrite(true); }
+    else if (action === 'edit' && payload) { pendingPw.current = pw; setEditData(payload); setViewNotice(null); setShowWrite(true); }
+    else if (action === 'delete' && payload) { try { await deleteNotice(payload, pw); setViewNotice(null); await load(); } catch (e: any) { alert(e.message || '삭제 실패'); } }
   };
 
-  if (showShelf) {
-    return (
-      <>
-        <div className="w-full text-[10px] font-sans">
-          <div className="bg-[#F2F2F2]/80 backdrop-blur-md border-t-2 border-b border-black/80 font-bold text-center">
-            <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', height: '20px' }}>
-              <div className="border-r border-gray-300/80">순위</div><div className="border-r border-gray-300/80">ISBN</div><div>도서명</div>
-            </div>
-          </div>
-          {books.map((book) => {
-            const isNew = book.trend === 'new'; const isOut = book.trend === 'out'; const isHighlight = isNew || isOut;
-            const isExpanded = expandedIsbns.has(book.isbn); const isThisLoading = loadingIsbns.has(book.isbn); const bookShelf = shelfInfo[book.isbn];
-
-            return (
-              <div key={`${book.isbn}-${book.trend}`}>
-                <div className={clsx("border-b smooth-transition", isExpanded && !isHighlight ? "border-amber-300/50" : "border-[#E1E1E1]/50", isNew && "bg-blue-600/90 backdrop-blur-sm text-white", isOut && "bg-red-600/90 backdrop-blur-sm text-white", !isHighlight && "text-black bg-white/40 hover:bg-white/60")}>
-                  <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', minHeight: '24px' }}>
-                    <div className={clsx("flex flex-col items-center justify-center border-r py-0.5", isHighlight ? "border-white/20" : "border-gray-200")}>
-                      <span className="font-bold">{book.rank > 0 ? book.rank : ''}</span>
-                      {book.trend === 'same' && <Minus size={8} className={isHighlight ? "text-white/60" : "text-gray-300"} />}
-                      {book.trend === 'up' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white/80" : "text-red-500")}>▲{book.trendValue}</span>}
-                      {book.trend === 'down' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white/80" : "text-blue-500")}>▼{book.trendValue}</span>}
-                      {book.trend === 'new' && <span className="text-[8px] leading-none text-white">NEW</span>}
-                      {book.trend === 'out' && <span className="text-[8px] leading-none text-white">OUT</span>}
-                    </div>
-                    <div className={clsx("text-center border-r cursor-pointer active:scale-95 text-[9px] tracking-tighter py-0.5 smooth-transition", isHighlight ? "border-white/20 text-white underline decoration-white/50" : "border-gray-200 text-[#555] underline decoration-gray-300 hover:text-blue-600")} onClick={(e) => handleIsbnClick(book, e)}>{book.isbn}</div>
-                    <div className={clsx("flex items-center px-1.5 py-0.5 cursor-pointer active:scale-95 min-w-0 smooth-transition", isExpanded && !isHighlight && "text-amber-700 font-bold", isThisLoading && "animate-pulse")} onClick={() => handleTitleClick(book)}>
-                      <span className="truncate font-semibold text-left flex-1 min-w-0">{book.title}</span>
-                      {isThisLoading && <Loader2 size={8} className="shrink-0 ml-1 animate-spin" />}
-                      {!isThisLoading && bookShelf?.stock && <span className={clsx("shrink-0 ml-1 text-[7px] px-1 py-px rounded-md font-bold whitespace-nowrap shadow-sm", isNew ? "bg-[#0000CD]/25 text-[#FFF79B] border border-[#FFF79B]/30" : isOut ? "bg-red-900/30 text-[#fca5a5] border border-red-300/30" : "bg-white/80 text-[#7a6e5f] border border-[#d5cfc6]")}>{bookShelf.stock}부</span>}
-                    </div>
-                  </div>
-                </div>
-                {isExpanded && (() => {
-                  const shelfLoaded = !isThisLoading && bookShelf !== undefined;
-                  return (
-                  <div className={clsx("grid border-b-2 overflow-hidden smooth-transition", shelfLoaded ? isNew ? "border-[#7eaad4] bg-[#3b6fa0]/90 backdrop-blur-sm" : isOut ? "border-[#f87171] bg-[#991b1b]/90 backdrop-blur-sm" : "border-[#d5cfc6] bg-[#f5f0e8]/80 backdrop-blur-sm" : "border-gray-200 bg-white/50")} style={{ gridTemplateColumns: '1fr 1fr', minHeight: '28px' }}>
-                    <div className={clsx("px-1 py-1 flex items-start border-r", shelfLoaded ? isHighlight ? "border-white/20" : "border-[#d5cfc6]" : "border-gray-200")}>{renderShelfCard(bookShelf, 0, book.trend, isThisLoading)}</div>
-                    <div className="px-1 py-1 flex items-start">{renderShelfCard(bookShelf, 1, book.trend, isThisLoading)}</div>
-                  </div>
-                  );
-                })()}
-              </div>
-            );
-          })}
-        </div>
-        {selectedBookForCover && <BookCoverModal isbn={selectedBookForCover.isbn} bookTitle={selectedBookForCover.title} onClose={() => setSelectedBookForCover(null)} />}
-        {isbnToastPortal}
-      </>
-    );
-  }
-
-  if (isMobile) {
-    return (
-      <>
-        <div className="w-full text-[10px] font-sans">
-          <div className="bg-[#F2F2F2]/80 backdrop-blur-md border-t-2 border-b border-black/80 font-bold text-center">
-            <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', height: '20px' }}>
-              <div className="border-r border-gray-300/80">순위</div><div className="border-r border-gray-300/80">ISBN</div><div>도서명</div>
-            </div>
-          </div>
-          {books.map((book) => {
-            const isNew = book.trend === 'new'; const isOut = book.trend === 'out'; const isHighlight = isNew || isOut;
-            return (
-              <div key={`${book.isbn}-${book.trend}`} className={clsx("border-b border-[#E1E1E1]/50 smooth-transition", isNew && "bg-blue-600/90 text-white", isOut && "bg-red-600/90 text-white", !isHighlight && "text-black bg-white/40 hover:bg-white/60")}>
-                <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', minHeight: '24px' }}>
-                  <div className={clsx("flex flex-col items-center justify-center border-r py-0.5", isHighlight ? "border-white/20" : "border-gray-200")}>
-                    <span className="font-bold">{book.rank > 0 ? book.rank : ''}</span>
-                    {book.trend === 'same' && <Minus size={8} className={isHighlight ? "text-white/60" : "text-gray-300"} />}
-                    {book.trend === 'up' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white/80" : "text-red-500")}>▲{book.trendValue}</span>}
-                    {book.trend === 'down' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white/80" : "text-blue-500")}>▼{book.trendValue}</span>}
-                    {book.trend === 'new' && <span className="text-[8px] leading-none text-white">NEW</span>}
-                    {book.trend === 'out' && <span className="text-[8px] leading-none text-white">OUT</span>}
-                  </div>
-                  <div className={clsx("text-center border-r cursor-pointer active:scale-95 text-[9px] tracking-tighter py-0.5 smooth-transition", isHighlight ? "border-white/20 text-white underline decoration-white/50" : "border-gray-200 text-[#555] underline decoration-gray-300 hover:text-blue-600")} onClick={() => setSelectedBookForCover(book)}>{book.isbn}</div>
-                  <div className="px-1.5 py-0.5 truncate font-semibold text-left">{book.title}</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {selectedBookForCover && <BookCoverModal isbn={selectedBookForCover.isbn} bookTitle={selectedBookForCover.title} onClose={() => setSelectedBookForCover(null)} />}
-      </>
-    );
-  }
+  const formatDate = (iso: string) => { const d = new Date(iso); return `${d.getMonth()+1}/${d.getDate()}`; };
 
   return (
     <>
-      <div className="w-full text-[10px] font-sans">
-        <div className="grid bg-[#F2F2F2]/80 backdrop-blur-md border-t-2 border-b border-black/80 font-bold text-center items-center" style={{ gridTemplateColumns: desktopGridTemplate, height: '25px' }}>
-          <div>순위</div><div>ISBN</div><div>도서명</div><div>변동</div>
-        </div>
-        {books.map((book) => {
-          const isNew = book.trend === 'new'; const isOut = book.trend === 'out';
-          return (
-            <div key={`${book.isbn}-${book.trend}`} className={clsx("grid border-b border-[#E1E1E1]/50 items-center smooth-transition", isNew ? "bg-blue-600/90 text-white" : isOut ? "bg-red-600/90 text-white" : "text-black bg-white/40 hover:bg-white/60")} style={{ gridTemplateColumns: desktopGridTemplate, height: '25px' }}>
-              <div className="text-center font-bold">{book.rank > 0 ? book.rank : ''}</div>
-              <div className={clsx("text-center tracking-tighter cursor-pointer transition-all active:scale-95", (isOut || isNew) ? "text-white underline decoration-white/50" : "text-[#555] underline decoration-gray-300 hover:text-blue-600 hover:decoration-blue-400")} onClick={(e) => handleIsbnClick(book, e)}>{book.isbn}</div>
-              <div className={clsx("px-2 leading-tight truncate font-semibold text-left smooth-transition", storeCode ? "cursor-pointer active:scale-95" : "", storeCode && !isNew && !isOut ? "hover:text-emerald-700" : "")} onClick={() => handleTitleClick(book)}>{book.title}</div>
-              <div className="flex justify-center items-center h-full font-bold">
-                {book.trend === 'same' && <Minus size={10} className={(isOut || isNew) ? "text-white/80" : "text-gray-400"} />}
-                {book.trend === 'up' && <div className={clsx("flex items-center", isNew ? "text-white" : "text-red-600")}><span className="text-[8px] mr-0.5">▲</span><span>{book.trendValue}</span></div>}
-                {book.trend === 'down' && <div className={clsx("flex items-center", isNew ? "text-white" : "text-blue-600")}><span className="text-[8px] mr-0.5">▼</span><span>{book.trendValue}</span></div>}
-                {book.trend === 'new' && <span className="text-white text-[9px]">NEW</span>}
-                {book.trend === 'out' && <span className="text-white text-[9px]">OUT</span>}
+      <div className={`relative flex ${className || ''}`} ref={popoverRef} data-no-drag>
+        <button onClick={() => { const next = !showPopover; setShowPopover(next); if (next) load(); }} className="flex flex-col items-center justify-center bg-red-50/80 hover:bg-red-100 text-red-700 border border-red-200/50 w-[72px] h-[60px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md">
+          <Bell size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap">공지사항</span>
+        </button>
+
+        <AnimatePresence>
+          {showPopover && (
+            <motion.div initial={{ opacity: 0, y: -10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }}
+              className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-[300px] bg-white/95 backdrop-blur-2xl shadow-[0_20px_40px_rgba(0,0,0,0.15)] rounded-2xl border border-gray-200 z-[60] overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100/50 bg-slate-50/50">
+                <span className="text-xs font-bold text-slate-700">사내 공지사항</span>
+                <button onClick={handleWriteClick} className="flex items-center gap-1 px-2.5 py-1 text-[10px] bg-red-50/80 text-red-600 hover:bg-red-100 rounded-lg smooth-transition active:scale-95 font-semibold border border-red-100/50"><Plus size={12} /> 작성</button>
               </div>
-            </div>
-          );
-        })}
+              <div className="max-h-[300px] overflow-y-auto custom-scrollbar p-1.5">
+                {loading ? <div className="py-6 text-center text-slate-400 text-xs">로딩...</div> : notices.length === 0 ? <div className="py-6 text-center text-slate-400 text-xs">등록된 공지가 없습니다</div> : notices.map(n => (
+                  <button key={n.id} onClick={() => { setViewNotice(n); setShowPopover(false); }} className="w-full text-left px-3 py-2.5 flex flex-col gap-1 hover:bg-gray-100/80 rounded-xl smooth-transition active:scale-95 border-b border-slate-100/30 last:border-0">
+                    <div className="text-[11px] font-semibold text-slate-700 truncate w-full">{n.title}</div><div className="text-[9px] text-slate-400">{formatDate(n.createdAt)}</div>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-      {selectedBookForCover && <BookCoverModal isbn={selectedBookForCover.isbn} bookTitle={selectedBookForCover.title} onClose={() => setSelectedBookForCover(null)} />}
-      {isbnToastPortal}
+
+      <AnimatePresence>
+        {showWrite && <WriteDialog initialData={editData} onSave={handleSave} onCancel={() => setShowWrite(false)} saving={saving} />}
+        {viewNotice && <ViewDialog notice={viewNotice} onClose={() => setViewNotice(null)} onEdit={handleEditClick} onDelete={handleDeleteClick} />}
+        {pwDialog && <PasswordDialog title={pwDialog.action === 'write' ? '게시글 작성 암호' : pwDialog.action === 'edit' ? '게시글 수정 암호' : '게시글 삭제 암호'} onConfirm={handlePwConfirm} onCancel={() => setPwDialog(null)} />}
+      </AnimatePresence>
+
+      <style>{`
+        .notice-content h1 { font-size: 1.8em; font-weight: 700; margin: 0.5em 0; }
+        .notice-content h2 { font-size: 1.5em; font-weight: 700; margin: 0.5em 0; }
+        .notice-content h3 { font-size: 1.25em; font-weight: 600; margin: 0.4em 0; }
+        .notice-content p { margin: 0.3em 0; line-height: 1.6; }
+        .notice-content ul { list-style: disc; padding-left: 1.5em; margin: 0.3em 0; }
+        .notice-content ol { list-style: decimal; padding-left: 1.5em; margin: 0.3em 0; }
+        .notice-content table { border-collapse: collapse; width: 100%; margin: 0.5em 0; }
+        .notice-content th, .notice-content td { border: 1px solid #d1d5db; padding: 8px 12px; text-align: left; }
+        .notice-content th { background: #f3f4f6; font-weight: 600; }
+        .notice-content img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .notice-content mark { padding: 2px 4px; border-radius: 4px; }
+        .notice-content blockquote { border-left: 4px solid #9ca3af; padding-left: 1em; color: #4b5563; margin: 0.5em 0; font-style: italic; background: #f9fafb; padding: 10px; border-radius: 0 8px 8px 0; }
+        .tiptap { min-height: 350px; } .tiptap:focus { outline: none; }
+        .tiptap h1 { font-size: 1.8em; font-weight: 700; margin: 0.5em 0; } .tiptap h2 { font-size: 1.5em; font-weight: 700; margin: 0.5em 0; } .tiptap h3 { font-size: 1.25em; font-weight: 600; margin: 0.4em 0; } .tiptap p { margin: 0.3em 0; line-height: 1.6; } .tiptap ul { list-style: disc; padding-left: 1.5em; margin: 0.3em 0; } .tiptap ol { list-style: decimal; padding-left: 1.5em; margin: 0.3em 0; } .tiptap table { border-collapse: collapse; width: 100%; margin: 0.5em 0; } .tiptap th, .tiptap td { border: 1px solid #d1d5db; padding: 8px 12px; text-align: left; min-width: 50px; position: relative; } .tiptap th { background: #f3f4f6; font-weight: 600; } .tiptap img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; } .tiptap mark { padding: 2px 4px; border-radius: 4px; } .tiptap blockquote { border-left: 4px solid #9ca3af; padding-left: 1em; color: #4b5563; margin: 0.5em 0; font-style: italic; background: #f9fafb; padding: 10px; border-radius: 0 8px 8px 0; } .tiptap .selectedCell { background: #dbeafe; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; } .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; } .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+      `}</style>
     </>
   );
-});
-BookTable.displayName = 'BookTable';
+};

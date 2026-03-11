@@ -19,7 +19,7 @@ function deepCloneParts(parts: PartConfig[]): PartConfig[] { return JSON.parse(J
 const RankStepper: React.FC<{ value: number; onChange: (v: number) => void; isSelected: boolean; }> = ({ value, onChange, isSelected }) => {
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => { const v = parseInt(e.target.value, 10); if (!isNaN(v) && v >= 1 && v <= 999) onChange(v); };
   return (
-    <div className={`flex items-center rounded-xl border shrink-0 smooth-transition overflow-hidden shadow-sm ${isSelected ? 'border-blue-400 bg-blue-500' : 'border-gray-300 bg-white/80 backdrop-blur-sm'}`} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}>
+    <div className={`flex items-center rounded-xl border shrink-0 smooth-transition overflow-hidden shadow-sm ${isSelected ? 'border-blue-400 bg-blue-500' : 'border-gray-300 bg-white/90 backdrop-blur-sm'}`} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}>
       <button onClick={e => { e.stopPropagation(); if (value > 1) onChange(value - 1); }} className={`w-6 h-6 flex items-center justify-center smooth-transition ${isSelected ? 'text-blue-200 hover:text-white hover:bg-blue-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-200'}`}><MinusIcon size={10} /></button>
       <input type="number" value={value} onChange={handleInput} className={`w-9 text-center text-xs border-x outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none smooth-transition ${isSelected ? 'bg-blue-500 border-blue-400 text-white' : 'bg-transparent border-gray-300 text-gray-700'}`} min={1} max={999} />
       <button onClick={e => { e.stopPropagation(); if (value < 999) onChange(value + 1); }} className={`w-6 h-6 flex items-center justify-center smooth-transition ${isSelected ? 'text-blue-200 hover:text-white hover:bg-blue-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-200'}`}><Plus size={10} /></button>
@@ -41,18 +41,18 @@ const PartManageDialog: React.FC<{ open: boolean; parts: PartConfig[]; onConfirm
   return (
     <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="glass-panel bg-white/95 backdrop-blur-2xl rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.15)] border border-white/50 w-[380px] max-h-[70vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="px-4 py-3 border-b border-gray-200/50 bg-white/80 flex items-center justify-between">
+        <div className="px-4 py-3 border-b border-gray-200/50 bg-white/90 flex items-center justify-between">
           <div className="flex items-center gap-2"><Settings2 size={16} className="text-gray-600" /><span className="text-sm font-bold text-gray-800">파트 관리</span></div>
           <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200/80 smooth-transition"><X size={14} className="text-gray-500" /></button>
         </div>
         <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-white/80 custom-scrollbar">
           {localParts.length === 0 ? <div className="text-center text-gray-400 text-xs py-8">등록된 파트가 없습니다</div> : localParts.map((part, idx) => (
-            <div key={part.id} className="flex items-center gap-2 bg-white/90 rounded-xl px-3 py-2 border border-gray-200/50 shadow-sm">
+            <div key={part.id} className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-gray-200/50 shadow-sm">
               <span className="text-xs text-gray-400 font-mono w-5 shrink-0">{idx + 1}</span><input type="text" value={part.name} onChange={e => handleRename(part.id, e.target.value)} className="flex-1 bg-transparent border-b border-gray-300 px-2 py-1 text-sm outline-none focus:border-blue-400 transition-colors" placeholder="파트 이름" /><span className="text-[10px] text-gray-400 shrink-0">{part.categories.length}개</span><button onClick={() => setDeleteTarget(part)} className="p-1.5 rounded-full hover:bg-red-100 text-gray-400 hover:text-red-500 smooth-transition active:scale-95" title="삭제"><Trash2 size={14} /></button>
             </div>
           ))}
         </div>
-        <div className="px-3 py-3 border-t border-gray-200/50 bg-white/80 flex items-center justify-between">
+        <div className="px-3 py-3 border-t border-gray-200/50 bg-white/90 flex items-center justify-between">
           <button onClick={handleAdd} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/90 text-white rounded-xl text-sm smooth-transition active:scale-95 shadow-sm"><Plus size={14} /><span>파트 추가</span></button>
           <div className="flex items-center gap-2"><button onClick={onClose} className="px-4 py-1.5 bg-gray-200/80 hover:bg-gray-300/80 text-gray-700 rounded-xl text-sm smooth-transition active:scale-95">취소</button><button onClick={() => { onConfirm(localParts); onClose(); }} className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600/90 text-white rounded-xl text-sm smooth-transition active:scale-95 shadow-sm"><Check size={14} />확인</button></div>
         </div>
@@ -166,21 +166,21 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({ open
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-        className="glass-panel bg-white/90 backdrop-blur-2xl rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-white/50 w-[760px] max-h-[85vh] flex flex-col overflow-hidden"
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
+        className="glass-panel bg-white/95 backdrop-blur-2xl rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-white/50 w-[760px] max-h-[85vh] flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()} onMouseDown={clearAllSelections}
       >
-        <div className="border-b border-gray-200/50 bg-white/80 shrink-0 px-5 pt-4 pb-3 space-y-3">
+        <div className="border-b border-gray-200/50 bg-white/90 shrink-0 px-5 pt-4 pb-3 space-y-3">
           <div className="flex items-stretch gap-3">
             <div className="flex-1 min-w-0 relative" onMouseDown={e => e.stopPropagation()}>
-              <button onClick={() => setShowStoreDropdown(prev => !prev)} className={`w-full h-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm smooth-transition active:scale-[0.98] border shadow-sm ${selectedStore ? 'bg-emerald-50/80 border-emerald-300 text-emerald-800' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}`}>
+              <button onClick={() => setShowStoreDropdown(prev => !prev)} className={`w-full h-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm smooth-transition active:scale-[0.98] border shadow-sm ${selectedStore ? 'bg-emerald-50/90 border-emerald-300 text-emerald-800' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}`}>
                 <MapPin size={14} className={selectedStore ? 'text-emerald-600' : 'text-gray-400'} />
                 {selectedStore ? <span className="flex-1 text-left truncate"><span className="text-emerald-500 font-mono mr-1">{selectedStore.code}</span>{selectedStore.name}</span> : <span className="flex-1 text-left text-gray-400">영업점 선택</span>}
                 <ChevronDown size={12} className={`transition-transform ${showStoreDropdown ? 'rotate-180' : ''}`} />
               </button>
               <AnimatePresence>
                 {showStoreDropdown && (
-                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="glass-panel absolute left-0 right-0 top-full mt-1 bg-white/95 rounded-2xl z-[210] overflow-hidden">
+                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="glass-panel absolute left-0 right-0 top-full mt-1 bg-white/95 rounded-2xl z-[210] overflow-hidden shadow-lg">
                     <div className="p-2 border-b border-gray-100/50">
                       <div className="flex items-center gap-2 bg-gray-50/80 rounded-xl px-3 py-1.5"><Search size={13} className="text-gray-400" /><input type="text" value={storeSearch} onChange={e => setStoreSearch(e.target.value)} placeholder="코드 또는 영업점명 검색" className="flex-1 bg-transparent text-sm outline-none placeholder-gray-400" autoFocus />{storeSearch && <button onClick={() => setStoreSearch('')} className="p-0.5"><X size={12} className="text-gray-400" /></button>}</div>
                     </div>
@@ -197,14 +197,14 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({ open
             </div>
 
             <div className="flex-1 min-w-0 relative" onMouseDown={e => e.stopPropagation()}>
-              <button onClick={() => setShowPartDropdown(prev => !prev)} disabled={parts.length === 0} className={`w-full h-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm smooth-transition active:scale-[0.98] border shadow-sm ${selectedPart ? 'bg-blue-50/80 border-blue-300 text-blue-800' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'} disabled:opacity-50 disabled:cursor-not-allowed`}>
+              <button onClick={() => setShowPartDropdown(prev => !prev)} disabled={parts.length === 0} className={`w-full h-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm smooth-transition active:scale-[0.98] border shadow-sm ${selectedPart ? 'bg-blue-50/90 border-blue-300 text-blue-800' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'} disabled:opacity-50 disabled:cursor-not-allowed`}>
                 <Layers size={13} className={selectedPart ? 'text-blue-600' : 'text-gray-400'} />
                 {selectedPart ? <span className="flex-1 text-left truncate"><span className="text-blue-400 font-mono mr-1 text-xs">{String(parts.indexOf(selectedPart) + 1).padStart(3, '0')}</span>{selectedPart.name}</span> : <span className="flex-1 text-left text-gray-400">{parts.length === 0 ? '파트 없음' : '파트 선택'}</span>}
                 <ChevronDown size={12} className={`transition-transform ${showPartDropdown ? 'rotate-180' : ''}`} />
               </button>
               <AnimatePresence>
                 {showPartDropdown && parts.length > 0 && (
-                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="glass-panel absolute left-0 right-0 top-full mt-1 bg-white/95 rounded-2xl z-[210] overflow-hidden">
+                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="glass-panel absolute left-0 right-0 top-full mt-1 bg-white/95 rounded-2xl z-[210] overflow-hidden shadow-lg">
                     <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
                       {parts.map((part, idx) => (
                         <button key={part.id} onClick={() => { setSelectedPartId(part.id); setShowPartDropdown(false); setSelectedActive(new Set()); setSelectedInactive(new Set()); setLastClickedActiveIndex(null); setLastClickedInactiveIndex(null); }} className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm smooth-transition ${selectedPartId === part.id ? 'bg-blue-50/80' : 'hover:bg-gray-50'}`}>
@@ -236,7 +236,7 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({ open
           ) : (
             <>
               <div className="flex-1 flex flex-col border-r border-gray-200/50 min-w-0">
-                <div className="px-4 py-2 bg-gray-100/80 border-b border-gray-200/50 flex items-center justify-between shrink-0" onMouseDown={e => e.stopPropagation()}>
+                <div className="px-4 py-2 bg-gray-50/80 border-b border-gray-200/50 flex items-center justify-between shrink-0" onMouseDown={e => e.stopPropagation()}>
                   <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={CATEGORIES.length > 0 && selectedInactive.size === CATEGORIES.length} ref={el => { if (el) el.indeterminate = selectedInactive.size > 0 && selectedInactive.size < CATEGORIES.length; }} onChange={handleSelectAllInactive} className="w-3.5 h-3.5 accent-gray-600 cursor-pointer" /><span className="text-sm font-bold text-gray-700">조코드 전체</span></label>
                   <span className="text-xs text-gray-500 font-mono font-semibold">{selectedInactive.size > 0 ? `${selectedInactive.size}/` : ''}{CATEGORIES.length}</span>
                 </div>
@@ -253,7 +253,7 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({ open
                 </div>
               </div>
 
-              <div className="flex flex-col items-center justify-center gap-3 px-3 shrink-0 bg-gray-50/80" onMouseDown={e => e.stopPropagation()}>
+              <div className="flex flex-col items-center justify-center gap-3 px-3 shrink-0 bg-gray-50/50" onMouseDown={e => e.stopPropagation()}>
                 <button onClick={moveToActive} disabled={selectedInactive.size === 0 || !selectedPart} className="w-10 h-10 rounded-xl bg-white border border-gray-300 flex items-center justify-center hover:bg-blue-50 hover:border-blue-400 disabled:opacity-30 disabled:hover:bg-white disabled:hover:border-gray-300 smooth-transition active:scale-90 shadow-sm"><ChevronRight size={20} className="text-blue-600" /></button>
                 <button onClick={moveToInactive} disabled={selectedActive.size === 0 || !selectedPart} className="w-10 h-10 rounded-xl bg-white border border-gray-300 flex items-center justify-center hover:bg-orange-50 hover:border-orange-400 disabled:opacity-30 disabled:hover:bg-white disabled:hover:border-gray-300 smooth-transition active:scale-90 shadow-sm"><ChevronLeft size={20} className="text-orange-600" /></button>
               </div>
@@ -287,7 +287,7 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({ open
           )}
         </div>
 
-        <div className="px-5 py-2.5 border-t border-gray-200/50 bg-white/80 text-[11px] font-semibold text-gray-500 shrink-0 text-center">
+        <div className="px-5 py-2.5 border-t border-gray-200/50 bg-white/90 text-[11px] font-semibold text-gray-500 shrink-0 text-center">
           클릭: 선택 | Ctrl+클릭: 다중 선택 | Shift+클릭: 범위 선택 | 더블클릭: 바로 이동 | 드래그: 순서 변경
         </div>
       </motion.div>
