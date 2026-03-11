@@ -103,8 +103,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   const lastWeekCloud = cloudInfo?.lastWeek;
   const hasParts = storeParts && storeParts.length > 0;
 
+  // 2026 트렌드: 딱딱한 테두리 대신 반투명 글래스모피즘(Glassmorphism)과 부드러운 그림자 적용
   return (
-    {/* 2026 트렌드: 딱딱한 테두리 대신 반투명 글래스모피즘(Glassmorphism)과 부드러운 그림자 적용 */}
     <div className="bg-white/60 backdrop-blur-xl border-b border-white/40 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] print:hidden relative z-50">
       <div className="px-3 py-2 flex justify-center">
         <div className="flex items-stretch gap-2">
