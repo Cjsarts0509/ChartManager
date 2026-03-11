@@ -17,7 +17,7 @@ import {
   Strikethrough, AlignLeft, AlignCenter, AlignRight,
   List, ListOrdered, Image, Table as TableIcon,
   Heading1, Heading2, Heading3, Undo2, Redo2,
-  Highlighter, Loader2, ChevronLeft, Lock, Pencil, Bell
+  Highlighter, Loader2, Lock, Pencil, Bell
 } from 'lucide-react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 
@@ -159,7 +159,6 @@ const COLORS = [
 function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
   const [showColor, setShowColor] = useState(false);
   const [showHighlight, setShowHighlight] = useState(false);
-  const [showFontSize, setShowFontSize] = useState(false);
   
   if (!editor) return null;
 
@@ -186,7 +185,6 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
   const closeAllPopups = () => {
     setShowColor(false);
     setShowHighlight(false);
-    setShowFontSize(false);
   };
 
   return (
@@ -199,22 +197,35 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       <Btn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="제목3"><Heading3 size={14} /></Btn>
       <div className="w-px h-4 bg-gray-300 mx-1" />
       
-      {/* Font Size */}
-      <div className="relative">
-        <Btn onClick={() => { closeAllPopups(); setShowFontSize(!showFontSize); }} title="글자크기">
-          <span className="text-[12px] font-bold px-1 tracking-tighter">12pt</span>
-        </Btn>
-        {showFontSize && (
-          <div className="absolute top-full left-0 mt-1 z-[100] bg-white shadow-xl rounded-lg border p-1.5 flex flex-col w-20">
-            {['12px', '14px', '16px', '18px', '20px', '24px', '30px'].map(size => (
-              <button key={size} className="hover:bg-blue-50 text-[12px] py-1.5 px-2 rounded text-left font-medium"
-                onClick={() => { editor.chain().focus().setFontSize(size).run(); setShowFontSize(false); }}
-              >
-                {size}
-              </button>
-            ))}
-          </div>
-        )}
+      {/* Font Size Up/Down (폰트 사이즈 업/다운 버튼) */}
+      <div className="flex items-center border border-gray-300 rounded shadow-sm overflow-hidden h-[26px]">
+        <button
+          type="button"
+          onClick={() => {
+            closeAllPopups();
+            const current = editor.getAttributes('textStyle').fontSize || '16px';
+            const num = parseInt(current, 10);
+            editor.chain().focus().setFontSize(`${Math.max(10, num - 2)}px`).run(); // 최소 10px
+          }}
+          title="글자 작게 (-2px)"
+          className="px-2.5 h-full text-gray-600 hover:bg-gray-200 font-bold text-[11px] flex items-center justify-center transition-colors"
+        >
+          A-
+        </button>
+        <div className="w-px h-4 bg-gray-300" />
+        <button
+          type="button"
+          onClick={() => {
+            closeAllPopups();
+            const current = editor.getAttributes('textStyle').fontSize || '16px';
+            const num = parseInt(current, 10);
+            editor.chain().focus().setFontSize(`${Math.min(60, num + 2)}px`).run(); // 최대 60px
+          }}
+          title="글자 크게 (+2px)"
+          className="px-2.5 h-full text-gray-600 hover:bg-gray-200 font-bold text-[14px] flex items-center justify-center transition-colors"
+        >
+          A+
+        </button>
       </div>
 
       <div className="w-px h-4 bg-gray-300 mx-1" />
@@ -339,7 +350,7 @@ function WriteDialog({ initialData, onSave, onCancel, saving }: {
           />
         </div>
 
-        <div className="flex flex-col flex-1 mx-5 mt-4 mb-4 border rounded-lg min-h-0 bg-white">
+        <div className="flex flex-col flex-1 mx-5 mt-4 mb-4 border rounded-lg min-h-0 bg-white shadow-[0_2px_8px_-4px_rgba(0,0,0,0.1)]">
           <div className="shrink-0 border-b bg-gray-50/50 rounded-t-lg">
             <EditorToolbar editor={editor} />
           </div>
