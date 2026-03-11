@@ -23,11 +23,12 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
   const [copiedIsbn, setCopiedIsbn] = useState<{ isbn: string; x: number; y: number } | null>(null);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // PC에서 ISBN 클릭 시 나타나는 팝업을 '최신 패널' 느낌(Emerald)으로 변경
   const isbnToastPortal = copiedIsbn ? createPortal(
     <>
       <div className="fixed z-[9999] pointer-events-none" style={{ left: copiedIsbn.x, top: copiedIsbn.y - 40 }}>
-        <div className="glass-panel px-3 py-1.5 rounded-xl bg-gray-900/80 text-white text-xs font-medium shadow-lg whitespace-nowrap -translate-x-1/2" style={{ animation: 'isbnToastFade 0.8s ease-in-out forwards' }}>
-          {copiedIsbn.isbn} 복사됨
+        <div className="glass-panel px-3 py-1.5 rounded-xl bg-gradient-to-br from-emerald-50 to-white/90 backdrop-blur-md border border-emerald-200 text-emerald-800 text-[11px] font-bold shadow-[0_4px_12px_rgba(16,185,129,0.15)] whitespace-nowrap -translate-x-1/2" style={{ animation: 'isbnToastFade 0.8s ease-in-out forwards' }}>
+          <span className="text-emerald-600 font-mono mr-1">{copiedIsbn.isbn}</span>복사완료!
         </div>
       </div>
       <style>{`@keyframes isbnToastFade { 0% { opacity: 0; transform: translateX(-50%) translateY(4px); } 15%, 70% { opacity: 1; transform: translateX(-50%) translateY(0); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px); } }`}</style>
@@ -83,7 +84,6 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
   }, [storeCode, isMobile, showShelfRow, expandedIsbns, fetchSingleShelf]);
 
   useImperativeHandle(ref, () => ({
-    // Promise 반환하도록 변경하여 MobileView.tsx에서 await 적용이 가능하도록 했습니다.
     fetchAllShelves: async () => {
       if (!storeCode || !showShelfRow) return;
       const isbns = books.map(b => b.isbn);
@@ -130,7 +130,7 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
     return (
       <div className={clsx("rounded-lg px-1.5 py-1 text-[8px] leading-tight border w-full smooth-transition shadow-sm",
         isNew ? "bg-[#c8d8eb] border-[#a3bcd8] text-[#1a3a5c]" : 
-        isOut ? "bg-[#fca5a5] border-[#f87171] text-[#450a0a]" : // 이전주(OUT) 서가 붉은색 테마
+        isOut ? "bg-[#fca5a5] border-[#f87171] text-[#450a0a]" : 
         "bg-white/80 border-[#d5cfc6] text-[#4a3f35]"
       )}>
         <div className="font-bold whitespace-normal break-words">{loc.location}</div>

@@ -54,14 +54,17 @@ const PartManageDialog: React.FC<{ open: boolean; parts: PartConfig[]; onConfirm
         </div>
         <div className="px-3 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
           <button onClick={handleAdd} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-xl text-sm font-bold smooth-transition active:scale-95 shadow-sm hover:bg-blue-700"><Plus size={14} /><span>파트 추가</span></button>
-          <div className="flex items-center gap-2"><button onClick={onClose} className="px-4 py-1.5 bg-slate-600 hover:bg-slate-700 text-white font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-sm">취소</button><button onClick={() => { onConfirm(localParts); onClose(); }} className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-sm"><Check size={14} />확인</button></div>
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} className="px-4 py-1.5 bg-gradient-to-b from-slate-500 to-slate-600 border border-slate-700/50 hover:from-slate-400 hover:to-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_1px_2px_rgba(0,0,0,0.1)] text-white font-bold rounded-xl text-sm smooth-transition active:scale-95">취소</button>
+            <button onClick={() => { onConfirm(localParts); onClose(); }} className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-b from-blue-500 to-blue-600 border border-blue-700/50 hover:from-blue-400 hover:to-blue-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_1px_2px_rgba(0,0,0,0.1)] text-white font-bold rounded-xl text-sm smooth-transition active:scale-95"><Check size={14} />확인</button>
+          </div>
         </div>
         {deleteTarget && (
           <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl border border-rose-200 shadow-2xl w-[340px] overflow-hidden" onClick={e => e.stopPropagation()}>
               <div className="px-4 py-3 bg-rose-50 border-b border-rose-100 flex items-center gap-2"><AlertTriangle size={18} className="text-rose-600" /><span className="text-sm font-bold text-rose-900">파트 삭제 경고</span></div>
               <div className="px-4 py-4 text-sm font-bold text-rose-900 space-y-2"><p><strong className="text-rose-700">"{deleteTarget.name}"</strong> 파트를 삭제하시겠습니까?</p>{deleteTarget.categories.length > 0 && <p className="text-xs text-rose-700 bg-rose-50/80 rounded-xl p-2">적용된 <strong className="text-rose-900">{deleteTarget.categories.length}개</strong> 조코드가 함께 삭제됩니다.</p>}</div>
-              <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex justify-end gap-2"><button onClick={() => setDeleteTarget(null)} className="px-4 py-1.5 bg-slate-600 hover:bg-slate-700 text-white font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-sm">취소</button><button onClick={handleDeleteConfirm} className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-sm">삭제</button></div>
+              <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex justify-end gap-2"><button onClick={() => setDeleteTarget(null)} className="px-4 py-1.5 bg-gradient-to-b from-slate-500 to-slate-600 hover:from-slate-400 hover:to-slate-500 border border-slate-700/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_1px_2px_rgba(0,0,0,0.1)] text-white font-bold rounded-xl text-sm smooth-transition active:scale-95">취소</button><button onClick={handleDeleteConfirm} className="px-4 py-1.5 bg-gradient-to-b from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500 border border-rose-700/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_1px_2px_rgba(0,0,0,0.1)] text-white font-bold rounded-xl text-sm smooth-transition active:scale-95">삭제</button></div>
             </motion.div>
           </div>
         )}
@@ -173,7 +176,7 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({ open
         <div className="border-b border-gray-100 bg-white shrink-0 px-5 pt-4 pb-3 space-y-3">
           <div className="flex items-stretch gap-3">
             <div className="flex-1 min-w-0 relative" onMouseDown={e => e.stopPropagation()}>
-              <button onClick={() => setShowStoreDropdown(prev => !prev)} className={`w-full h-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold smooth-transition active:scale-[0.98] shadow-sm ${selectedStore ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-slate-500 hover:bg-slate-600 text-white'}`}>
+              <button onClick={() => setShowStoreDropdown(prev => !prev)} className={`w-full h-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold smooth-transition active:scale-[0.98] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] border ${selectedStore ? 'bg-gradient-to-b from-emerald-500 to-emerald-600 border-emerald-700/50 hover:from-emerald-400 hover:to-emerald-500 text-white' : 'bg-gradient-to-b from-slate-500 to-slate-600 border-slate-700/50 hover:from-slate-400 hover:to-slate-500 text-white'}`}>
                 <MapPin size={14} className={selectedStore ? 'text-white' : 'text-gray-200'} />
                 {selectedStore ? <span className="flex-1 text-left truncate"><span className="text-emerald-200 font-mono mr-1">{selectedStore.code}</span>{selectedStore.name}</span> : <span className="flex-1 text-left">영업점 선택</span>}
                 <ChevronDown size={12} className={`transition-transform ${showStoreDropdown ? 'rotate-180' : ''}`} />
@@ -197,7 +200,7 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({ open
             </div>
 
             <div className="flex-1 min-w-0 relative" onMouseDown={e => e.stopPropagation()}>
-              <button onClick={() => setShowPartDropdown(prev => !prev)} disabled={parts.length === 0} className={`w-full h-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold smooth-transition active:scale-[0.98] shadow-sm ${selectedPart ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-slate-500 hover:bg-slate-600 text-white'} disabled:opacity-50 disabled:cursor-not-allowed`}>
+              <button onClick={() => setShowPartDropdown(prev => !prev)} disabled={parts.length === 0} className={`w-full h-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold smooth-transition active:scale-[0.98] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] border ${selectedPart ? 'bg-gradient-to-b from-blue-500 to-blue-600 border-blue-700/50 hover:from-blue-400 hover:to-blue-500 text-white' : 'bg-gradient-to-b from-slate-500 to-slate-600 border-slate-700/50 hover:from-slate-400 hover:to-slate-500 text-white'} disabled:opacity-50 disabled:cursor-not-allowed`}>
                 <Layers size={13} className={selectedPart ? 'text-white' : 'text-gray-200'} />
                 {selectedPart ? <span className="flex-1 text-left truncate"><span className="text-blue-200 font-mono mr-1 text-xs">{String(parts.indexOf(selectedPart) + 1).padStart(3, '0')}</span>{selectedPart.name}</span> : <span className="flex-1 text-left">{parts.length === 0 ? '파트 없음' : '파트 선택'}</span>}
                 <ChevronDown size={12} className={`transition-transform ${showPartDropdown ? 'rotate-180' : ''}`} />
@@ -220,13 +223,12 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({ open
 
           <div className="flex items-stretch gap-3">
             <div className="flex-1 flex items-center gap-2" onMouseDown={e => e.stopPropagation()}>
-              <button onClick={handleSave} disabled={saving || !selectedStore} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-xl text-sm font-bold smooth-transition active:scale-95 shadow-sm"><Save size={14} /><span>{saving ? '저장중...' : '저장'}</span></button>
-              {/* 취소 버튼은 차콜/슬레이트 계열, 초기화는 진한연두색 적용 */}
-              <button onClick={onClose} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-sm"><XCircle size={14} /><span>취소</span></button>
-              <button onClick={handleReset} disabled={!selectedPart} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-lime-600 hover:bg-lime-700 text-white font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-sm disabled:opacity-50"><RotateCcw size={14} /><span>초기화</span></button>
+              <button onClick={handleSave} disabled={saving || !selectedStore} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gradient-to-b from-blue-500 to-blue-600 border border-blue-700/50 hover:from-blue-400 hover:to-blue-500 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-xl text-sm font-bold smooth-transition active:scale-95 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)]"><Save size={14} /><span>{saving ? '저장중...' : '저장'}</span></button>
+              <button onClick={onClose} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gradient-to-b from-slate-500 to-slate-600 border border-slate-700/50 hover:from-slate-400 hover:to-slate-500 text-white font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)]"><XCircle size={14} /><span>취소</span></button>
+              <button onClick={handleReset} disabled={!selectedPart} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gradient-to-b from-lime-500 to-lime-600 border border-lime-700/50 hover:from-lime-400 hover:to-lime-500 text-white font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] disabled:opacity-50"><RotateCcw size={14} /><span>초기화</span></button>
             </div>
             <div className="flex-1" onMouseDown={e => e.stopPropagation()}>
-              <button onClick={() => setShowPartManage(true)} disabled={!selectedStore} className="w-full h-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-sm disabled:opacity-50"><Settings2 size={13} /><span>파트관리</span></button>
+              <button onClick={() => setShowPartManage(true)} disabled={!selectedStore} className="w-full h-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gradient-to-b from-violet-500 to-violet-600 border border-violet-700/50 hover:from-violet-400 hover:to-violet-500 text-white font-bold rounded-xl text-sm smooth-transition active:scale-95 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] disabled:opacity-50"><Settings2 size={13} /><span>파트관리</span></button>
             </div>
           </div>
         </div>
@@ -236,7 +238,6 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({ open
             <div className="flex-1 flex items-center justify-center text-gray-500 font-bold text-sm">설정 불러오는 중...</div>
           ) : (
             <>
-              {/* 왼쪽 조코드 전체 리스트 영역 - 화이트 테마 및 그림자 구분 */}
               <div className="flex-1 flex flex-col border-r border-gray-100 min-w-0">
                 <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between shrink-0" onMouseDown={e => e.stopPropagation()}>
                   <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={CATEGORIES.length > 0 && selectedInactive.size === CATEGORIES.length} ref={el => { if (el) el.indeterminate = selectedInactive.size > 0 && selectedInactive.size < CATEGORIES.length; }} onChange={handleSelectAllInactive} className="w-3.5 h-3.5 accent-blue-600 cursor-pointer" /><span className="text-sm font-bold text-gray-900">조코드 전체</span></label>
@@ -260,7 +261,6 @@ export const CategoryConfigDialog: React.FC<CategoryConfigDialogProps> = ({ open
                 <button onClick={moveToInactive} disabled={selectedActive.size === 0 || !selectedPart} className="w-10 h-10 rounded-xl bg-white shadow-sm border border-gray-200 flex items-center justify-center hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-white smooth-transition active:scale-90"><ChevronLeft size={20} className="text-gray-700" /></button>
               </div>
 
-              {/* 오른쪽 적용 조코드 리스트 영역 - 화이트 테마 및 그림자 구분 */}
               <div className="flex-1 flex flex-col min-w-0" style={{ flex: '1.2' }}>
                 <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between shrink-0" onMouseDown={e => e.stopPropagation()}>
                   <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={activeCategories.length > 0 && selectedActive.size === activeCategories.length} ref={el => { if (el) el.indeterminate = selectedActive.size > 0 && selectedActive.size < activeCategories.length; }} onChange={handleSelectAllActive} disabled={activeCategories.length === 0} className="w-3.5 h-3.5 accent-blue-600 cursor-pointer" /><span className="text-sm font-bold text-gray-900">적용 조코드</span></label>

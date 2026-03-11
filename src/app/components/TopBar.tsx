@@ -82,11 +82,13 @@ export const TopBar: React.FC<TopBarProps> = ({
   const lastWeekCloud = cloudInfo?.lastWeek;
   const hasParts = storeParts && storeParts.length > 0;
 
+  // Fluent Design 그라데이션 버튼 공통 클래스
+  const fluentBtnBase = "flex flex-col items-center justify-center border text-white w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-lg disabled:opacity-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)]";
+
   return (
     <div className="glass-panel print:hidden relative z-50">
       <div className="px-3 py-2 flex justify-center">
         <div className="flex items-stretch gap-2">
-            {/* 업로드 버튼 (이전 디자인 복구 및 호버 애니메이션 유지) */}
             <div 
               className="border-2 border-dashed border-slate-300/80 rounded-2xl px-5 flex flex-col items-center justify-center gap-0.5 bg-white/50 hover:bg-white hover:border-slate-400 smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md cursor-pointer min-w-[140px] h-[60px]" 
               onClick={() => fileInputRef.current?.click()}
@@ -124,24 +126,22 @@ export const TopBar: React.FC<TopBarProps> = ({
 
             <div className="flex gap-1.5 shrink-0 h-[60px]">
               <InlineNoticePanel />
-              <button onClick={onRefreshCloud} disabled={cloudLoading} className="flex flex-col items-center justify-center bg-teal-600 hover:bg-teal-700 text-white w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-lg shadow-md disabled:opacity-50"><RefreshCw size={22} className={`mb-1 ${cloudLoading ? 'animate-spin' : ''}`} /><span className="text-[11px] font-bold whitespace-nowrap">{cloudLoading ? '동기화중' : '클라우드'}</span></button>
-              <a href={BOARD_URL} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center bg-sky-600 hover:bg-sky-700 text-white w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-lg shadow-md"><ExternalLink size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap">게시판</span></a>
-              <button onClick={onAddList} className="flex flex-col items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-lg shadow-md"><Plus size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap">페이지추가</span></button>
-              <button onClick={onPrint} className="flex flex-col items-center justify-center bg-violet-600 hover:bg-violet-700 text-white w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-lg shadow-md"><Printer size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap">전체인쇄</span></button>
-              <button onClick={onPrintA4} className="flex flex-col items-center justify-center bg-amber-600 hover:bg-amber-700 text-white w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-lg shadow-md"><FileText size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap">A4인쇄</span></button>
-              {/* 설정 버튼 차콜 그레이 색상 적용 */}
-              <button onClick={onOpenCategoryConfig} className="flex flex-col items-center justify-center bg-slate-700 hover:bg-slate-800 text-white w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-lg shadow-md"><Settings size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap text-center">설정</span></button>
+              <button onClick={onRefreshCloud} disabled={cloudLoading} className={`${fluentBtnBase} bg-gradient-to-b from-teal-500 to-teal-600 border-teal-700/50 hover:from-teal-400 hover:to-teal-500`}><RefreshCw size={22} className={`mb-1 ${cloudLoading ? 'animate-spin' : ''}`} /><span className="text-[11px] font-bold whitespace-nowrap">{cloudLoading ? '동기화중' : '클라우드'}</span></button>
+              <a href={BOARD_URL} target="_blank" rel="noopener noreferrer" className={`${fluentBtnBase} bg-gradient-to-b from-sky-500 to-sky-600 border-sky-700/50 hover:from-sky-400 hover:to-sky-500`}><ExternalLink size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap">게시판</span></a>
+              <button onClick={onAddList} className={`${fluentBtnBase} bg-gradient-to-b from-indigo-500 to-indigo-600 border-indigo-700/50 hover:from-indigo-400 hover:to-indigo-500`}><Plus size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap">페이지추가</span></button>
+              <button onClick={onPrint} className={`${fluentBtnBase} bg-gradient-to-b from-violet-500 to-violet-600 border-violet-700/50 hover:from-violet-400 hover:to-violet-500`}><Printer size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap">전체인쇄</span></button>
+              <button onClick={onPrintA4} className={`${fluentBtnBase} bg-gradient-to-b from-amber-500 to-amber-600 border-amber-700/50 hover:from-amber-400 hover:to-amber-500`}><FileText size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap">A4인쇄</span></button>
+              <button onClick={onOpenCategoryConfig} className={`${fluentBtnBase} bg-gradient-to-b from-slate-600 to-slate-700 border-slate-800/50 hover:from-slate-500 hover:to-slate-600`}><Settings size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap text-center">설정</span></button>
             </div>
 
             <div className="w-px bg-slate-300/60 shrink-0 my-1 rounded-full ml-1" />
 
             <div className="flex flex-col gap-1 min-w-0 justify-center h-[60px]" style={{ flex: '0 1 360px' }}>
               <div className="relative h-[28px]" ref={storePanelRef}>
-                {/* 영업점, 파트선택 버튼 높이 고정 및 통일된 폰트 볼드 적용하여 UI 흔들림 방지 */}
-                <button onClick={() => { setShowStorePanel(prev => !prev); setShowPartPanel(false); }} className={`w-full h-full flex items-center gap-1.5 px-3 rounded-xl text-[11px] font-bold smooth-transition active:scale-[0.98] shadow-sm ${selectedStore ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-slate-500 hover:bg-slate-600 text-white'}`}>
+                <button onClick={() => { setShowStorePanel(prev => !prev); setShowPartPanel(false); }} className={`w-full h-full flex items-center gap-1.5 px-3 rounded-xl text-[11px] font-bold smooth-transition active:scale-[0.98] border shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] ${selectedStore ? 'bg-gradient-to-b from-emerald-500 to-emerald-600 border-emerald-700/50 hover:from-emerald-400 hover:to-emerald-500 text-white' : 'bg-gradient-to-b from-slate-500 to-slate-600 border-slate-700/50 hover:from-slate-400 hover:to-slate-500 text-white'}`}>
                   <MapPin size={12} className="text-white/80" />
                   {selectedStore ? <span className="flex-1 text-left truncate font-bold"><span className="text-emerald-200 font-mono mr-1.5">{selectedStore.code}</span>{selectedStore.name}</span> : <span className="flex-1 text-left font-bold">영업점 선택</span>}
-                  {selectedStore && <span onClick={handleClearStore} className="p-1 rounded-full hover:bg-emerald-800/50 smooth-transition"><X size={10} className="text-white" /></span>}
+                  {selectedStore && <span onClick={handleClearStore} className="p-1 rounded-full hover:bg-white/20 smooth-transition"><X size={10} className="text-white" /></span>}
                   <ChevronDown size={12} className={`transition-transform duration-300 shrink-0 ${showStorePanel ? 'rotate-180' : ''}`} />
                 </button>
                 {showStorePanel && (
@@ -165,10 +165,10 @@ export const TopBar: React.FC<TopBarProps> = ({
 
               <div className="flex items-center gap-1.5 h-[28px]">
                 <div className="flex-1 relative min-w-0 h-full" ref={partPanelRef}>
-                  <button onClick={() => { if (hasParts) { setShowPartPanel(prev => !prev); setShowStorePanel(false); } }} className={`w-full h-full flex items-center gap-1.5 px-3 rounded-xl text-[11px] font-bold smooth-transition active:scale-[0.98] shadow-sm ${selectedPart ? 'bg-blue-600 hover:bg-blue-700 text-white' : hasParts ? 'bg-slate-500 hover:bg-slate-600 text-white' : 'bg-slate-300 text-slate-500 cursor-default shadow-none'}`}>
+                  <button onClick={() => { if (hasParts) { setShowPartPanel(prev => !prev); setShowStorePanel(false); } }} className={`w-full h-full flex items-center gap-1.5 px-3 rounded-xl text-[11px] font-bold smooth-transition active:scale-[0.98] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] border ${selectedPart ? 'bg-gradient-to-b from-blue-500 to-blue-600 border-blue-700/50 hover:from-blue-400 hover:to-blue-500 text-white' : hasParts ? 'bg-gradient-to-b from-slate-500 to-slate-600 border-slate-700/50 hover:from-slate-400 hover:to-slate-500 text-white' : 'bg-slate-300 text-slate-500 cursor-default shadow-none border-transparent'}`}>
                     <Layers size={12} className={selectedPart || hasParts ? 'text-white/80' : 'text-slate-400'} />
                     {selectedPart ? <span className="flex-1 text-left truncate font-bold">{selectedPart.name}<span className="text-blue-100 ml-1.5 text-[9px] bg-blue-800/50 px-1 py-0.5 rounded-md">{selectedPart.categories.length}개</span></span> : <span className="flex-1 text-left truncate font-bold">{!selectedStore ? '영업점 먼저 선택' : hasParts ? '파트 선택' : '파트 없음'}</span>}
-                    {selectedPart && <span onClick={(e) => { e.stopPropagation(); onSelectPart?.(null); }} className="p-1 rounded-full hover:bg-blue-800/50 transition-colors"><X size={10} className="text-white" /></span>}
+                    {selectedPart && <span onClick={(e) => { e.stopPropagation(); onSelectPart?.(null); }} className="p-1 rounded-full hover:bg-white/20 transition-colors"><X size={10} className="text-white" /></span>}
                     {hasParts && <ChevronDown size={12} className={`transition-transform duration-300 shrink-0 ${showPartPanel ? 'rotate-180' : ''}`} />}
                   </button>
                   {showPartPanel && hasParts && (
@@ -186,9 +186,8 @@ export const TopBar: React.FC<TopBarProps> = ({
                     </div>
                   )}
                 </div>
-                {/* 불러오기, 초기화 버튼도 솔리드 컬러 톤으로 변경 */}
-                <button onClick={onLoadPartLists} disabled={!selectedPart} className={`flex items-center gap-1 px-2.5 h-full rounded-xl text-[10px] smooth-transition active:scale-95 whitespace-nowrap shadow-sm font-bold ${selectedPart ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'}`}><Download size={12} /><span>불러오기</span></button>
-                <button onClick={onClearLists} className="flex items-center gap-1 px-2.5 h-full rounded-xl text-[10px] smooth-transition active:scale-95 whitespace-nowrap shadow-sm font-bold bg-lime-600 hover:bg-lime-700 text-white"><Trash2 size={12} /><span>초기화</span></button>
+                <button onClick={onLoadPartLists} disabled={!selectedPart} className={`flex items-center gap-1 px-2.5 h-full rounded-xl text-[10px] smooth-transition active:scale-95 whitespace-nowrap shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] border font-bold ${selectedPart ? 'bg-gradient-to-b from-blue-500 to-blue-600 border-blue-700/50 hover:from-blue-400 hover:to-blue-500 text-white' : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none border-transparent'}`}><Download size={12} /><span>불러오기</span></button>
+                <button onClick={onClearLists} className="flex items-center gap-1 px-2.5 h-full rounded-xl text-[10px] smooth-transition active:scale-95 whitespace-nowrap shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] border font-bold bg-gradient-to-b from-lime-500 to-lime-600 hover:from-lime-400 hover:to-lime-500 border-lime-700/50 text-white"><Trash2 size={12} /><span>초기화</span></button>
               </div>
             </div>
         </div>

@@ -101,7 +101,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
       <div className="sticky top-0 z-[100] glass-panel bg-white/70 backdrop-blur-md border-b border-white/40 shadow-sm">
         <div className="grid px-3 pt-2 pb-1 gap-x-2 gap-y-1" style={{ gridTemplateColumns: '1fr auto' }}>
           <div className="relative min-w-0" ref={storePanelRef}>
-            <button onClick={() => { setShowStorePanel(prev => !prev); setShowPartPanel(false); }} className={`w-full flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold smooth-transition active:scale-95 border border-transparent shadow-sm ${selectedStore ? 'bg-emerald-600 text-white' : 'bg-slate-500 text-white'}`}>
+            <button onClick={() => { setShowStorePanel(prev => !prev); setShowPartPanel(false); }} className={`w-full flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold smooth-transition active:scale-[0.98] border border-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] ${selectedStore ? 'bg-gradient-to-b from-emerald-500 to-emerald-600 border-emerald-700/50 hover:from-emerald-400 hover:to-emerald-500 text-white' : 'bg-gradient-to-b from-slate-500 to-slate-600 border-slate-700/50 hover:from-slate-400 hover:to-slate-500 text-white'}`}>
               <MapPin size={13} className="text-white" />
               {selectedStore ? <span className="flex-1 text-left truncate"><span className="text-emerald-200 font-mono mr-1.5">{selectedStore.code}</span>{selectedStore.name}</span> : <span className="flex-1 text-left">영업점 선택</span>}
               <ChevronDown size={12} className={`transition-transform shrink-0 ${showStorePanel ? 'rotate-180' : ''}`} />
@@ -131,13 +131,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
             </AnimatePresence>
           </div>
           
-          <button onClick={onRefreshCloud} disabled={cloudLoading} className={`flex items-center justify-center gap-1 w-[52px] py-1.5 rounded-xl text-xs font-bold border-transparent border smooth-transition active:scale-95 shadow-sm ${cloudLoading ? 'bg-teal-700 text-white' : 'bg-teal-600 hover:bg-teal-700 text-white'}`}><RefreshCw size={13} className={cloudLoading ? 'animate-spin' : ''} /><Cloud size={13} /></button>
+          <button onClick={onRefreshCloud} disabled={cloudLoading} className={`flex items-center justify-center gap-1 w-[52px] py-1.5 rounded-xl text-xs font-bold border-transparent border smooth-transition active:scale-95 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] ${cloudLoading ? 'bg-gradient-to-b from-teal-600 to-teal-700 border-teal-800/50 text-white' : 'bg-gradient-to-b from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 border-teal-700/50 text-white'}`}><RefreshCw size={13} className={cloudLoading ? 'animate-spin' : ''} /><Cloud size={13} /></button>
 
           <div className="relative min-w-0" ref={partPanelRef}>
-            <button onClick={() => { if (!selectedStore || partsLoading || storeParts.length === 0) return; setShowPartPanel(prev => !prev); setShowStorePanel(false); }} className={`w-full flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-transparent smooth-transition active:scale-95 shadow-sm ${selectedPart ? 'bg-blue-600 text-white' : selectedStore && storeParts.length > 0 ? 'bg-slate-500 text-white' : 'bg-slate-300 text-slate-500 shadow-none'}`}>
+            <button onClick={() => { if (!selectedStore || partsLoading || storeParts.length === 0) return; setShowPartPanel(prev => !prev); setShowStorePanel(false); }} className={`w-full flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-transparent smooth-transition active:scale-[0.98] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] ${selectedPart ? 'bg-gradient-to-b from-blue-500 to-blue-600 border-blue-700/50 hover:from-blue-400 hover:to-blue-500 text-white' : selectedStore && storeParts.length > 0 ? 'bg-gradient-to-b from-slate-500 to-slate-600 border-slate-700/50 hover:from-slate-400 hover:to-slate-500 text-white' : 'bg-slate-300 text-slate-500 shadow-none'}`}>
               <Layers size={13} className={selectedPart || (selectedStore && storeParts.length > 0) ? 'text-white' : 'text-slate-400'} />
               {!selectedStore ? <span className="flex-1 text-left truncate">영업점을 먼저 선택</span> : partsLoading ? <span className="flex-1 text-left truncate">불러오는 중...</span> : storeParts.length === 0 ? <span className="flex-1 text-left truncate">설정된 파트 없음</span> : selectedPart ? <span className="flex-1 text-left truncate">{selectedPart.name}<span className="text-blue-100 ml-1.5 text-[10px] bg-blue-800/50 px-1 py-0.5 rounded-md">{selectedPart.categories.length}개 조코드</span></span> : <span className="flex-1 text-left truncate">파트를 선택하세요</span>}
-              {selectedPart && <span onClick={(e) => { e.stopPropagation(); setSelectedPartId(null); setShowPartPanel(false); }} className="p-0.5 rounded-full hover:bg-blue-800/50 smooth-transition"><X size={12} className="text-white" /></span>}
+              {selectedPart && <span onClick={(e) => { e.stopPropagation(); setSelectedPartId(null); setShowPartPanel(false); }} className="p-0.5 rounded-full hover:bg-white/20 smooth-transition"><X size={12} className="text-white" /></span>}
               {selectedStore && storeParts.length > 0 && <ChevronDown size={12} className={`transition-transform shrink-0 ${showPartPanel ? 'rotate-180' : ''}`} />}
             </button>
             <AnimatePresence>
@@ -166,7 +166,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
               }
             }}
             disabled={!selectedStore || !hasData}
-            className={`flex items-center justify-center gap-1 w-[52px] py-1.5 rounded-xl text-xs font-bold border border-transparent smooth-transition active:scale-95 shadow-sm ${selectedStore && hasData ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-slate-300 text-slate-500 shadow-none'}`}
+            className={`flex items-center justify-center gap-1 w-[52px] py-1.5 rounded-xl text-xs font-bold border border-transparent smooth-transition active:scale-95 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] ${selectedStore && hasData ? 'bg-gradient-to-b from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 border-amber-700/50 text-white' : 'bg-slate-300 text-slate-500 shadow-none'}`}
           >
             <BookOpen size={13} />
             <span className="text-[10px]">서가</span>
@@ -191,7 +191,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
           </div>
         ) : !hasData ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-16 h-16 glass-panel bg-gray-100 border border-gray-200 rounded-2xl flex items-center justify-center mb-4 shadow-sm"><FileSpreadsheet size={28} className="text-gray-500" /></div><p className="text-gray-800 text-sm mb-1 font-bold">클라우드에 업로드된 파일이 없습니다</p><button onClick={onRefreshCloud} className="mt-4 flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold smooth-transition active:scale-95 shadow-md hover:bg-emerald-700"><RefreshCw size={14} /> 다시 시도</button>
+            <div className="w-16 h-16 glass-panel bg-gray-100 border border-gray-200 rounded-2xl flex items-center justify-center mb-4 shadow-sm"><FileSpreadsheet size={28} className="text-gray-500" /></div><p className="text-gray-800 text-sm mb-1 font-bold">클라우드에 업로드된 파일이 없습니다</p><button onClick={onRefreshCloud} className="mt-4 flex items-center gap-2 px-4 py-2 bg-gradient-to-b from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 border border-emerald-700/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] text-white rounded-xl text-sm font-bold smooth-transition active:scale-95"><RefreshCw size={14} /> 다시 시도</button>
           </div>
         ) : (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">

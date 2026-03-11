@@ -135,11 +135,11 @@ function PasswordDialog({ onConfirm, onCancel, title }: {
           className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-gray-900 mb-3 outline-none focus:border-blue-500 bg-gray-50 placeholder-gray-400"
         />
         <div className="flex justify-end gap-2">
-          <button onClick={onCancel} className="px-4 py-1.5 text-xs font-bold bg-slate-600 hover:bg-slate-700 text-white rounded-lg smooth-transition active:scale-95">취소</button>
+          <button onClick={onCancel} className="px-4 py-1.5 text-xs font-bold bg-gradient-to-b from-slate-500 to-slate-600 hover:from-slate-400 hover:to-slate-500 border border-slate-700/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] text-white rounded-lg smooth-transition active:scale-95">취소</button>
           <button
             onClick={() => pw && onConfirm(pw)}
             disabled={!pw}
-            className="px-4 py-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-40 smooth-transition active:scale-95 shadow-sm"
+            className="px-4 py-1.5 text-xs font-bold bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 border border-blue-700/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] text-white rounded-lg disabled:opacity-40 smooth-transition active:scale-95"
           >확인</button>
         </div>
       </motion.div>
@@ -296,8 +296,8 @@ function WriteDialog({ initialData, onSave, onCancel, saving }: {
         </div>
 
         <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-100 bg-white shrink-0">
-          <button onClick={onCancel} className="px-5 py-2 text-sm font-bold bg-slate-600 text-white hover:bg-slate-700 rounded-xl smooth-transition active:scale-95">취소</button>
-          <button onClick={() => { if (!title.trim()) { alert('제목을 입력해주세요.'); return; } if (!editor?.getHTML() || editor.isEmpty) { alert('내용을 입력해주세요.'); return; } onSave(title.trim(), editor.getHTML()); }} disabled={saving || !title.trim()} className="px-6 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl disabled:opacity-40 flex items-center gap-1.5 font-bold smooth-transition active:scale-95 shadow-sm">
+          <button onClick={onCancel} className="px-5 py-2 text-sm font-bold bg-gradient-to-b from-slate-500 to-slate-600 hover:from-slate-400 hover:to-slate-500 border border-slate-700/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] text-white rounded-xl smooth-transition active:scale-95">취소</button>
+          <button onClick={() => { if (!title.trim()) { alert('제목을 입력해주세요.'); return; } if (!editor?.getHTML() || editor.isEmpty) { alert('내용을 입력해주세요.'); return; } onSave(title.trim(), editor.getHTML()); }} disabled={saving || !title.trim()} className="px-6 py-2 text-sm bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 border border-blue-700/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] text-white rounded-xl disabled:opacity-40 flex items-center gap-1.5 font-bold smooth-transition active:scale-95">
             {saving && <Loader2 size={14} className="animate-spin" />} 저장
           </button>
         </div>
@@ -338,10 +338,10 @@ function ViewDialog({ notice, onClose, onEdit, onDelete }: {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button onClick={onEdit} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl smooth-transition active:scale-95 font-bold shadow-sm">
+            <button onClick={onEdit} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gradient-to-b from-indigo-500 to-indigo-600 hover:from-indigo-400 hover:to-indigo-500 border border-indigo-700/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] text-white rounded-xl smooth-transition active:scale-95 font-bold">
               <Pencil size={13} />수정
             </button>
-            <button onClick={onDelete} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-rose-600 text-white hover:bg-rose-700 rounded-xl smooth-transition active:scale-95 font-bold shadow-sm">
+            <button onClick={onDelete} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gradient-to-b from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500 border border-rose-700/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] text-white rounded-xl smooth-transition active:scale-95 font-bold">
               <Trash2 size={13} />삭제
             </button>
             <div className="w-px h-4 bg-gray-300 mx-1"></div>
@@ -458,14 +458,13 @@ export const InlineNoticePanel: React.FC<InlineNoticePanelProps> = ({ className 
   return (
     <>
       <div className={`relative flex ${className || ''}`} ref={popoverRef} data-no-drag>
-        {/* 솔리드 컬러 톤의 공지사항 버튼 */}
         <button
           onClick={() => {
             const next = !showPopover;
             setShowPopover(next);
             if (next) load();
           }}
-          className="flex flex-col items-center justify-center bg-rose-600 hover:bg-rose-700 text-white w-[72px] h-[60px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md"
+          className="flex flex-col items-center justify-center bg-gradient-to-b from-rose-500 to-rose-600 border border-rose-700/50 hover:from-rose-400 hover:to-rose-500 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_2px_4px_rgba(0,0,0,0.1)] w-[72px] h-[60px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-lg"
         >
           <Bell size={22} className="mb-1" />
           <span className="text-[11px] font-bold whitespace-nowrap">공지사항</span>
@@ -482,7 +481,7 @@ export const InlineNoticePanel: React.FC<InlineNoticePanelProps> = ({ className 
             >
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50">
                 <span className="text-xs font-bold text-gray-900">사내 공지사항</span>
-                <button onClick={handleWriteClick} className="flex items-center gap-1 px-2.5 py-1 text-[10px] bg-blue-600 text-white hover:bg-blue-700 rounded-lg smooth-transition active:scale-95 font-bold shadow-sm">
+                <button onClick={handleWriteClick} className="flex items-center gap-1 px-2.5 py-1 text-[10px] bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 border border-blue-700/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_1px_2px_rgba(0,0,0,0.1)] text-white rounded-lg smooth-transition active:scale-95 font-bold">
                   <Plus size={12} /> 작성
                 </button>
               </div>
