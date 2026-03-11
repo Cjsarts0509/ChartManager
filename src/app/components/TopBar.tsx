@@ -3,6 +3,7 @@ import { Upload, Plus, Printer, ExternalLink, RefreshCw, FileText, MapPin, Searc
 import { CloudFilesResponse } from '../../lib/cloud';
 import { STORES, Store } from '../../lib/constants';
 import { PartConfig } from '../../lib/cloud';
+import { InlineNoticePanel } from './NoticeBoard';
 
 interface TopBarProps {
   titleThisWeek: string;
@@ -107,20 +108,25 @@ export const TopBar: React.FC<TopBarProps> = ({
 
   return (
     <div className="bg-white border-b border-gray-300 shadow-sm print:hidden">
-      {/* Row 1: Upload + Cloud Status + Buttons */}
-      <div className="px-3 pt-3 pb-2">
-        <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row gap-3 items-stretch justify-between">
-          
-          {/* Left: File Upload + Cloud Status */}
-          <div className="flex flex-1 gap-3 w-full md:w-auto items-stretch">
+      {/* Single Row: Notice + Controls, centered */}
+      <div className="px-3 py-2 flex justify-center">
+        <div className="flex items-stretch gap-2">
 
-            {/* Upload Button Area */}
-            <div className="border-2 border-dashed border-gray-300 rounded-lg px-4 flex flex-col items-center justify-center gap-0.5 bg-gray-50 hover:bg-gray-100 hover:border-gray-400 cursor-pointer transition-colors min-w-[130px] h-[60px]"
+          {/* ===== Notice Panel (leftmost) ===== */}
+          <InlineNoticePanel className="w-[280px] shrink-0 h-[60px]" />
+
+          {/* Divider */}
+          <div className="w-px bg-gray-200 shrink-0 my-1" />
+
+          {/* ===== Controls ===== */}
+
+            {/* Upload Button */}
+            <div className="border-2 border-dashed border-gray-300 rounded-lg px-5 flex flex-col items-center justify-center gap-0.5 bg-gray-50 hover:bg-gray-100 hover:border-gray-400 cursor-pointer transition-colors min-w-[150px] h-[60px]"
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload size={18} className="text-gray-500" />
-              <span className="text-[11px] font-bold text-gray-600">엑셀 파일 업로드</span>
-              <span className="text-[9px] text-gray-400">주차 자동 인식 · 최대 3MB</span>
+              <span className="text-[11px] font-bold text-gray-600 text-center">엑셀 파일 업로드</span>
+              <span className="text-[8px] text-gray-400 text-center">주간 베스트셀러 (xlsx, xls) · 3MB</span>
               <input 
                 type="file" 
                 accept=".xlsx, .xls" 
@@ -131,15 +137,15 @@ export const TopBar: React.FC<TopBarProps> = ({
             </div>
 
             {/* Cloud File Status */}
-            <div className="flex flex-col gap-1 flex-1 min-w-0 justify-center h-[60px]">
+            <div className="flex flex-col gap-1 min-w-0 justify-center h-[60px]" style={{ flex: '0 1 380px' }}>
               {/* This Week */}
               <div className="border rounded-md px-3 py-1 bg-white flex items-center gap-2">
                 <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded shrink-0">최신</span>
                 {thisWeekCloud?.exists ? (
                   <div className="flex-1 min-w-0 flex items-center gap-2">
-                    <span className="text-xs font-semibold text-gray-800 truncate">{thisWeekCloud.title || thisWeekCloud.filename}</span>
-                    <span className="text-[10px] text-gray-400 shrink-0 font-mono">{thisWeekCloud.weekKey}</span>
-                    <span className="text-[10px] text-gray-400 shrink-0">{formatDate(thisWeekCloud.uploadedAt)}</span>
+                    <span className="text-xs font-semibold text-gray-800 truncate flex-1">{thisWeekCloud.title || thisWeekCloud.filename}</span>
+                    <span className="text-[10px] text-gray-400 shrink-0 font-mono text-center w-[72px]">{thisWeekCloud.weekKey}</span>
+                    <span className="text-[10px] text-gray-400 shrink-0 text-center w-[68px]">{formatDate(thisWeekCloud.uploadedAt)}</span>
                   </div>
                 ) : (
                   <span className="text-xs text-gray-400 truncate">{titleThisWeek || "파일 없음"}</span>
@@ -151,257 +157,252 @@ export const TopBar: React.FC<TopBarProps> = ({
                 <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded shrink-0">이전</span>
                 {lastWeekCloud?.exists ? (
                   <div className="flex-1 min-w-0 flex items-center gap-2">
-                    <span className="text-xs font-semibold text-gray-800 truncate">{lastWeekCloud.title || lastWeekCloud.filename}</span>
-                    <span className="text-[10px] text-gray-400 shrink-0 font-mono">{lastWeekCloud.weekKey}</span>
-                    <span className="text-[10px] text-gray-400 shrink-0">{formatDate(lastWeekCloud.uploadedAt)}</span>
+                    <span className="text-xs font-semibold text-gray-800 truncate flex-1">{lastWeekCloud.title || lastWeekCloud.filename}</span>
+                    <span className="text-[10px] text-gray-400 shrink-0 font-mono text-center w-[72px]">{lastWeekCloud.weekKey}</span>
+                    <span className="text-[10px] text-gray-400 shrink-0 text-center w-[68px]">{formatDate(lastWeekCloud.uploadedAt)}</span>
                   </div>
                 ) : (
                   <span className="text-xs text-gray-400 truncate">{titleLastWeek || "파일 없음"}</span>
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Right: Action Buttons */}
-          <div className="flex gap-2 w-full md:w-auto justify-end shrink-0 h-[60px]">
-            <button 
-              onClick={onRefreshCloud}
-              disabled={cloudLoading}
-              className="flex flex-col items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 w-[64px] rounded-md transition-colors disabled:opacity-50"
-            >
-              <RefreshCw size={18} className={`mb-0.5 ${cloudLoading ? 'animate-spin' : ''}`} />
-              <span className="text-[9px] font-bold">{cloudLoading ? '동기화중' : '클라우드'}</span>
-            </button>
+            {/* Action Buttons */}
+            <div className="flex gap-1.5 shrink-0 h-[60px]">
+              <button 
+                onClick={onRefreshCloud}
+                disabled={cloudLoading}
+                className="flex flex-col items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 w-[68px] rounded-md transition-colors disabled:opacity-50"
+              >
+                <RefreshCw size={16} className={`mb-0.5 ${cloudLoading ? 'animate-spin' : ''}`} />
+                <span className="text-[8px] font-bold">{cloudLoading ? '동기화중' : '클라우드'}</span>
+              </button>
 
-            <a
-              href={BOARD_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-col items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 w-[64px] rounded-md transition-colors"
-            >
-              <ExternalLink size={18} className="mb-0.5" />
-              <span className="text-[9px] font-bold">게시판</span>
-            </a>
+              <a
+                href={BOARD_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-col items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 w-[68px] rounded-md transition-colors"
+              >
+                <ExternalLink size={16} className="mb-0.5" />
+                <span className="text-[8px] font-bold">게시판</span>
+              </a>
 
-            <button 
-              onClick={onAddList}
-              className="flex flex-col items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 w-[64px] rounded-md transition-colors"
-            >
-              <Plus size={18} className="mb-0.5" />
-              <span className="text-[9px] font-bold">페이지추가</span>
-            </button>
+              <button 
+                onClick={onAddList}
+                className="flex flex-col items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 w-[68px] rounded-md transition-colors"
+              >
+                <Plus size={16} className="mb-0.5" />
+                <span className="text-[8px] font-bold">페이지추가</span>
+              </button>
 
-            <button 
-              onClick={onPrint}
-              className="flex flex-col items-center justify-center bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 w-[64px] rounded-md transition-colors"
-            >
-              <Printer size={18} className="mb-0.5" />
-              <span className="text-[9px] font-bold">전체인쇄</span>
-            </button>
+              <button 
+                onClick={onPrint}
+                className="flex flex-col items-center justify-center bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 w-[68px] rounded-md transition-colors"
+              >
+                <Printer size={16} className="mb-0.5" />
+                <span className="text-[8px] font-bold">전체인쇄</span>
+              </button>
 
-            <button 
-              onClick={onPrintA4}
-              className="flex flex-col items-center justify-center bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 w-[64px] rounded-md transition-colors"
-            >
-              <FileText size={18} className="mb-0.5" />
-              <span className="text-[9px] font-bold">A4인쇄</span>
-            </button>
+              <button 
+                onClick={onPrintA4}
+                className="flex flex-col items-center justify-center bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 w-[68px] rounded-md transition-colors"
+              >
+                <FileText size={16} className="mb-0.5" />
+                <span className="text-[8px] font-bold">A4인쇄</span>
+              </button>
 
-            <button 
-              onClick={onOpenCategoryConfig}
-              className="flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-300 w-[64px] rounded-md transition-colors"
-            >
-              <Settings size={18} className="mb-0.5" />
-              <span className="text-[9px] font-bold">카테고리 설정</span>
-            </button>
-          </div>
+              <button 
+                onClick={onOpenCategoryConfig}
+                className="flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-300 w-[68px] rounded-md transition-colors"
+              >
+                <Settings size={16} className="mb-0.5" />
+                <span className="text-[8px] font-bold leading-tight text-center">설정</span>
+              </button>
+            </div>
 
-        </div>
-      </div>
+            {/* Divider */}
+            <div className="w-px bg-gray-200 shrink-0 my-1" />
 
-      {/* Row 2: 영업점 + 파트 선택 + 리스트 불러오기 */}
-      <div className="px-3 pb-2">
-        <div className="max-w-[1400px] mx-auto flex items-stretch gap-2">
-          {/* Left: 영업점 선택 */}
-          <div className="flex-1 relative" ref={storePanelRef}>
-            <button
-              onClick={() => { setShowStorePanel(prev => !prev); setShowPartPanel(false); }}
-              className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all border ${
-                selectedStore
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                  : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100 hover:border-gray-300'
-              }`}
-            >
-              <MapPin size={13} className={selectedStore ? 'text-emerald-600' : 'text-gray-400'} />
-              {selectedStore ? (
-                <span className="font-semibold flex-1 text-left truncate">
-                  <span className="text-emerald-500 font-mono mr-1.5">{selectedStore.code}</span>
-                  {selectedStore.name}
-                </span>
-              ) : (
-                <span className="flex-1 text-left text-gray-400">영업점을 선택하세요</span>
-              )}
-              {selectedStore && (
-                <span
-                  onClick={handleClearStore}
-                  className="p-0.5 rounded-full hover:bg-emerald-200 transition-colors"
+            {/* Store + Part + Actions (compact inline) */}
+            <div className="flex flex-col gap-0.5 min-w-0 justify-center h-[60px]" style={{ flex: '0 1 360px' }}>
+              {/* Store selector row */}
+              <div className="relative" ref={storePanelRef}>
+                <button
+                  onClick={() => { setShowStorePanel(prev => !prev); setShowPartPanel(false); }}
+                  className={`w-full flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] transition-all border ${
+                    selectedStore
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100 hover:border-gray-300'
+                  }`}
                 >
-                  <X size={12} className="text-emerald-600" />
-                </span>
-              )}
-              <ChevronDown size={12} className={`transition-transform shrink-0 ${showStorePanel ? 'rotate-180' : ''}`} />
-            </button>
-
-            {/* Store Dropdown */}
-            {showStorePanel && (
-              <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-200 z-[60] overflow-hidden">
-                {/* 검색 */}
-                <div className="p-2 border-b border-gray-100">
-                  <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
-                    <Search size={14} className="text-gray-400 shrink-0" />
-                    <input
-                      type="text"
-                      value={storeSearch}
-                      onChange={(e) => setStoreSearch(e.target.value)}
-                      placeholder="코드 또는 영업점명 검색"
-                      className="flex-1 bg-transparent text-sm outline-none placeholder-gray-400"
-                      autoFocus
-                    />
-                    {storeSearch && (
-                      <button onClick={() => setStoreSearch("")} className="p-0.5">
-                        <X size={12} className="text-gray-400" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* 목록 */}
-                <div className="max-h-[300px] overflow-y-auto">
-                  {filteredStores.length === 0 ? (
-                    <div className="py-6 text-center text-gray-400 text-xs">검색 결과가 없습니다</div>
+                  <MapPin size={11} className={selectedStore ? 'text-emerald-600' : 'text-gray-400'} />
+                  {selectedStore ? (
+                    <span className="font-semibold flex-1 text-left truncate">
+                      <span className="text-emerald-500 font-mono mr-1">{selectedStore.code}</span>
+                      {selectedStore.name}
+                    </span>
                   ) : (
-                    filteredStores.map(store => {
-                      const isSelected = selectedStore?.code === store.code;
-                      return (
-                        <button
-                          key={store.code}
-                          onClick={() => handleSelectStore(store)}
-                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                            isSelected ? 'bg-emerald-50' : 'hover:bg-gray-50'
-                          }`}
-                        >
-                          <span className={`font-mono text-xs w-8 shrink-0 ${isSelected ? 'text-emerald-600 font-bold' : 'text-gray-400'}`}>
-                            {store.code}
-                          </span>
-                          <span className={`text-sm flex-1 ${isSelected ? 'text-emerald-800 font-semibold' : 'text-gray-700'}`}>
-                            {store.name}
-                          </span>
-                          {isSelected && (
-                            <div className="w-2 h-2 bg-emerald-500 rounded-full shrink-0" />
-                          )}
-                        </button>
-                      );
-                    })
+                    <span className="flex-1 text-left text-gray-400 text-[10px]">영업점 선택</span>
+                  )}
+                  {selectedStore && (
+                    <span
+                      onClick={handleClearStore}
+                      className="p-0.5 rounded-full hover:bg-emerald-200 transition-colors"
+                    >
+                      <X size={10} className="text-emerald-600" />
+                    </span>
+                  )}
+                  <ChevronDown size={10} className={`transition-transform shrink-0 ${showStorePanel ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Store Dropdown */}
+                {showStorePanel && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-200 z-[60] overflow-hidden">
+                    <div className="p-2 border-b border-gray-100">
+                      <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                        <Search size={14} className="text-gray-400 shrink-0" />
+                        <input
+                          type="text"
+                          value={storeSearch}
+                          onChange={(e) => setStoreSearch(e.target.value)}
+                          placeholder="코드 또는 영업점명 검색"
+                          className="flex-1 bg-transparent text-sm outline-none placeholder-gray-400"
+                          autoFocus
+                        />
+                        {storeSearch && (
+                          <button onClick={() => setStoreSearch("")} className="p-0.5">
+                            <X size={12} className="text-gray-400" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto">
+                      {filteredStores.length === 0 ? (
+                        <div className="py-6 text-center text-gray-400 text-xs">검색 결과가 없습니다</div>
+                      ) : (
+                        filteredStores.map(store => {
+                          const isSelected = selectedStore?.code === store.code;
+                          return (
+                            <button
+                              key={store.code}
+                              onClick={() => handleSelectStore(store)}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                                isSelected ? 'bg-emerald-50' : 'hover:bg-gray-50'
+                              }`}
+                            >
+                              <span className={`font-mono text-xs w-8 shrink-0 ${isSelected ? 'text-emerald-600 font-bold' : 'text-gray-400'}`}>
+                                {store.code}
+                              </span>
+                              <span className={`text-sm flex-1 ${isSelected ? 'text-emerald-800 font-semibold' : 'text-gray-700'}`}>
+                                {store.name}
+                              </span>
+                              {isSelected && (
+                                <div className="w-2 h-2 bg-emerald-500 rounded-full shrink-0" />
+                              )}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Part selector + action buttons row */}
+              <div className="flex items-center gap-1">
+                <div className="flex-1 relative min-w-0" ref={partPanelRef}>
+                  <button
+                    onClick={() => { if (hasParts) { setShowPartPanel(prev => !prev); setShowStorePanel(false); } }}
+                    className={`w-full flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] transition-all border ${
+                      selectedPart
+                        ? 'bg-blue-50 border-blue-200 text-blue-800'
+                        : hasParts
+                          ? 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100 hover:border-gray-300'
+                          : 'bg-gray-50 border-gray-200 text-gray-400 cursor-default'
+                    }`}
+                  >
+                    <Layers size={11} className={selectedPart ? 'text-blue-600' : 'text-gray-400'} />
+                    {selectedPart ? (
+                      <span className="font-semibold flex-1 text-left truncate">
+                        {selectedPart.name}
+                        <span className="text-blue-400 ml-1 text-[9px]">{selectedPart.categories.length}개</span>
+                      </span>
+                    ) : (
+                      <span className="flex-1 text-left text-gray-400 text-[10px] truncate">
+                        {!selectedStore ? '영업점 먼저 선택' : hasParts ? '파트 선택' : '파트 없음'}
+                      </span>
+                    )}
+                    {selectedPart && (
+                      <span
+                        onClick={(e) => { e.stopPropagation(); onSelectPart?.(null); }}
+                        className="p-0.5 rounded-full hover:bg-blue-200 transition-colors"
+                      >
+                        <X size={10} className="text-blue-600" />
+                      </span>
+                    )}
+                    {hasParts && (
+                      <ChevronDown size={10} className={`transition-transform shrink-0 ${showPartPanel ? 'rotate-180' : ''}`} />
+                    )}
+                  </button>
+
+                  {/* Part Dropdown */}
+                  {showPartPanel && hasParts && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-200 z-[60] overflow-hidden">
+                      <div className="max-h-[300px] overflow-y-auto">
+                        {storeParts!.map((part, idx) => {
+                          const isSelected = selectedPartId === part.id;
+                          return (
+                            <button
+                              key={part.id}
+                              onClick={() => { onSelectPart?.(part.id); setShowPartPanel(false); }}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                                isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
+                              }`}
+                            >
+                              <Layers size={12} className={isSelected ? 'text-blue-500' : 'text-gray-300'} />
+                              <span className={`font-mono text-xs w-7 shrink-0 ${isSelected ? 'text-blue-500' : 'text-gray-400'}`}>
+                                {String(idx + 1).padStart(3, '0')}
+                              </span>
+                              <span className={`text-sm flex-1 ${isSelected ? 'text-blue-800 font-semibold' : 'text-gray-700'}`}>
+                                {part.name}
+                              </span>
+                              <span className={`text-[10px] shrink-0 ${isSelected ? 'text-blue-500' : 'text-gray-400'}`}>
+                                {part.categories.length}개
+                              </span>
+                              {isSelected && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full shrink-0" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
 
-          {/* Center: 파트 선택 */}
-          <div className="flex-[0.8] relative" ref={partPanelRef}>
-            <button
-              onClick={() => { if (hasParts) { setShowPartPanel(prev => !prev); setShowStorePanel(false); } }}
-              className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all border ${
-                selectedPart
-                  ? 'bg-blue-50 border-blue-200 text-blue-800'
-                  : hasParts
-                    ? 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100 hover:border-gray-300'
-                    : 'bg-gray-50 border-gray-200 text-gray-400 cursor-default'
-              }`}
-            >
-              <Layers size={13} className={selectedPart ? 'text-blue-600' : 'text-gray-400'} />
-              {selectedPart ? (
-                <span className="font-semibold flex-1 text-left truncate">
-                  <span className="text-blue-400 font-mono mr-1 text-[10px]">{String((storeParts?.indexOf(selectedPart) ?? 0) + 1).padStart(3, '0')}</span>
-                  {selectedPart.name}
-                  <span className="text-blue-400 ml-1.5 text-[10px]">{selectedPart.categories.length}개 조코드</span>
-                </span>
-              ) : (
-                <span className="flex-1 text-left text-gray-400">
-                  {!selectedStore ? '영업점을 먼저 선택하세요' : hasParts ? '파트를 선택하세요' : '설정된 파트가 없습니다'}
-                </span>
-              )}
-              {selectedPart && (
-                <span
-                  onClick={(e) => { e.stopPropagation(); onSelectPart?.(null); }}
-                  className="p-0.5 rounded-full hover:bg-blue-200 transition-colors"
+                {/* Load + Clear buttons */}
+                <button
+                  onClick={onLoadPartLists}
+                  disabled={!selectedPart}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] transition-all border whitespace-nowrap ${
+                    selectedPart
+                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600 cursor-pointer'
+                      : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                  }`}
                 >
-                  <X size={12} className="text-blue-600" />
-                </span>
-              )}
-              {hasParts && (
-                <ChevronDown size={12} className={`transition-transform shrink-0 ${showPartPanel ? 'rotate-180' : ''}`} />
-              )}
-            </button>
-
-            {/* Part Dropdown */}
-            {showPartPanel && hasParts && (
-              <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-200 z-[60] overflow-hidden">
-                <div className="max-h-[300px] overflow-y-auto">
-                  {storeParts!.map((part, idx) => {
-                    const isSelected = selectedPartId === part.id;
-                    return (
-                      <button
-                        key={part.id}
-                        onClick={() => { onSelectPart?.(part.id); setShowPartPanel(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                          isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
-                        }`}
-                      >
-                        <Layers size={12} className={isSelected ? 'text-blue-500' : 'text-gray-300'} />
-                        <span className={`font-mono text-xs w-7 shrink-0 ${isSelected ? 'text-blue-500' : 'text-gray-400'}`}>
-                          {String(idx + 1).padStart(3, '0')}
-                        </span>
-                        <span className={`text-sm flex-1 ${isSelected ? 'text-blue-800 font-semibold' : 'text-gray-700'}`}>
-                          {part.name}
-                        </span>
-                        <span className={`text-[10px] shrink-0 ${isSelected ? 'text-blue-500' : 'text-gray-400'}`}>
-                          {part.categories.length}개
-                        </span>
-                        {isSelected && (
-                          <div className="w-2 h-2 bg-blue-500 rounded-full shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                  <Download size={10} />
+                  <span className="font-semibold">불러오기</span>
+                </button>
+                <button
+                  onClick={onClearLists}
+                  className="flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] transition-all border bg-gray-50 hover:bg-red-50 text-gray-500 hover:text-red-600 border-gray-200 hover:border-red-200 whitespace-nowrap"
+                >
+                  <Trash2 size={10} />
+                  <span className="font-semibold">초기화</span>
+                </button>
               </div>
-            )}
-          </div>
-
-          {/* Right: 리스트 불러오기 + 초기화 버튼 */}
-          <div className="flex gap-1.5 shrink-0">
-            <button
-              onClick={onLoadPartLists}
-              disabled={!selectedPart}
-              className={`flex items-center gap-1.5 px-3 rounded-lg text-xs transition-all border ${
-                selectedPart
-                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600 cursor-pointer'
-                  : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-              }`}
-            >
-              <Download size={13} />
-              <span className="font-semibold whitespace-nowrap">리스트 불러오기</span>
-            </button>
-            <button
-              onClick={onClearLists}
-              className="flex items-center gap-1 px-3 rounded-lg text-xs transition-all border bg-gray-50 hover:bg-red-50 text-gray-500 hover:text-red-600 border-gray-200 hover:border-red-200"
-            >
-              <Trash2 size={13} />
-              <span className="font-semibold whitespace-nowrap">초기화</span>
-            </button>
-          </div>
+            </div>
         </div>
       </div>
     </div>
