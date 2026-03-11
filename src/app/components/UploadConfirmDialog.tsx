@@ -19,9 +19,9 @@ export const UploadConfirmDialog: React.FC<UploadConfirmDialogProps> = ({
   onCancel,
 }) => {
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50" onClick={onCancel}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-indigo-900/30 backdrop-blur-[24px]" onClick={onCancel}>
       <div 
-        className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-[90%] mx-4"
+        className="glass-panel bg-white/60 backdrop-blur-3xl rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] border border-white/60 p-6 max-w-md w-[90%] mx-4"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Icon + Title */}
@@ -33,18 +33,18 @@ export const UploadConfirmDialog: React.FC<UploadConfirmDialogProps> = ({
             }
           </div>
           <div>
-            <h3 className="font-bold text-gray-900">동일 주차 파일 존재</h3>
-            <p className="text-sm text-gray-500 mt-0.5">덮어쓰시겠습니까?</p>
+            <h3 className="font-bold text-indigo-900">동일 주차 파일 존재</h3>
+            <p className="text-sm font-bold text-indigo-600 mt-0.5">덮어쓰시겠습니까?</p>
           </div>
         </div>
 
         {/* Content Changed Warning */}
         {contentChanged && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-start gap-2.5">
-            <ShieldAlert size={18} className="text-red-500 shrink-0 mt-0.5" />
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-start gap-2.5 shadow-sm">
+            <ShieldAlert size={18} className="text-red-600 shrink-0 mt-0.5" />
             <div className="text-sm">
-              <p className="text-red-700 font-bold">파일 내용이 다릅니다</p>
-              <p className="text-red-600 mt-0.5">
+              <p className="text-red-800 font-bold">파일 내용이 다릅니다</p>
+              <p className="text-red-600 font-bold mt-0.5">
                 같은 주차이지만 기존 파일과 내용이 일치하지 않습니다.
                 의도된 수정인지 확인 후 덮어쓰기하세요.
               </p>
@@ -53,20 +53,20 @@ export const UploadConfirmDialog: React.FC<UploadConfirmDialogProps> = ({
         )}
 
         {/* Info */}
-        <div className="bg-gray-50 rounded-lg p-4 mb-5 space-y-2 text-sm">
+        <div className="bg-indigo-50/80 rounded-lg p-4 mb-5 space-y-2 text-sm border border-indigo-100 shadow-inner">
           <div className="flex justify-between">
-            <span className="text-gray-500">주차 키</span>
-            <span className="font-mono font-bold text-gray-800">{weekKey}</span>
+            <span className="text-indigo-600 font-bold">주차 키</span>
+            <span className="font-mono font-bold text-indigo-900">{weekKey}</span>
           </div>
           {existingTitle && (
             <div className="flex justify-between">
-              <span className="text-gray-500">기존 파일</span>
-              <span className="text-gray-700 text-right max-w-[200px] truncate">{existingTitle}</span>
+              <span className="text-indigo-600 font-bold">기존 파일</span>
+              <span className="text-indigo-900 font-bold text-right max-w-[200px] truncate">{existingTitle}</span>
             </div>
           )}
           <div className="flex justify-between">
-            <span className="text-gray-500">새 파일</span>
-            <span className="text-gray-700 text-right max-w-[200px] truncate">{title}</span>
+            <span className="text-indigo-600 font-bold">새 파일</span>
+            <span className="text-indigo-900 font-bold text-right max-w-[200px] truncate">{title}</span>
           </div>
         </div>
 
@@ -74,15 +74,15 @@ export const UploadConfirmDialog: React.FC<UploadConfirmDialogProps> = ({
         <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm font-bold"
+            className="flex-1 px-4 py-2.5 bg-rose-100 hover:bg-rose-200 border-rose-300 rounded-xl text-rose-700 transition-colors text-sm font-bold shadow-sm"
           >
             취소
           </button>
           <button
             onClick={onConfirm}
-            className={`flex-1 px-4 py-2.5 text-white rounded-lg transition-colors text-sm font-bold ${
+            className={`flex-1 px-4 py-2.5 text-white rounded-xl transition-colors text-sm font-bold shadow-sm ${
               contentChanged 
-                ? 'bg-red-500 hover:bg-red-600' 
+                ? 'bg-red-600 hover:bg-red-700' 
                 : 'bg-amber-500 hover:bg-amber-600'
             }`}
           >

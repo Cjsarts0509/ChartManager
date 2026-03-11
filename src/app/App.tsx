@@ -22,94 +22,6 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
-// ==========================================
-// Custom Cursor Component (기본 커서 + 관성 링 & 파티클)
-// ==========================================
-const CustomCursor = () => {
-  const ringCursor = useRef<HTMLDivElement>(null);
-  const [isHovering, setIsHovering] = useState(false);
-  const [isClicking, setIsClicking] = useState(false);
-  const [particles, setParticles] = useState<{ id: number; x: number; y: number }[]>([]);
-  const mousePos = useRef({ x: 0, y: 0 });
-  const ringPos = useRef({ x: 0, y: 0 });
-  const requestRef = useRef<number>();
-
-  useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => { mousePos.current = { x: e.clientX, y: e.clientY }; };
-    const onMouseDown = () => {
-      setIsClicking(true);
-      const newParticles = Array.from({ length: 6 }).map((_, i) => ({
-        id: Date.now() + i,
-        x: mousePos.current.x,
-        y: mousePos.current.y
-      }));
-      setParticles(newParticles);
-      setTimeout(() => setParticles([]), 600);
-    };
-    const onMouseUp = () => setIsClicking(false);
-
-    const updateHoverState = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('a, button, input, select, textarea, [role="button"], .cursor-pointer')) {
-        setIsHovering(true);
-      } else {
-        setIsHovering(false);
-      }
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mouseup', onMouseUp);
-    window.addEventListener('mouseover', updateHoverState);
-
-    const loop = () => {
-      // Ring Cursor Lerp (0.15 추적)
-      ringPos.current.x += (mousePos.current.x - ringPos.current.x) * 0.15;
-      ringPos.current.y += (mousePos.current.y - ringPos.current.y) * 0.15;
-
-      if (ringCursor.current) {
-        ringCursor.current.style.transform = `translate3d(${ringPos.current.x}px, ${ringPos.current.y}px, 0) scale(${isClicking ? 0.9 : isHovering ? 1.5 : 1})`;
-      }
-      requestRef.current = requestAnimationFrame(loop);
-    };
-    requestRef.current = requestAnimationFrame(loop);
-
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mouseup', onMouseUp);
-      window.removeEventListener('mouseover', updateHoverState);
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    };
-  }, [isClicking, isHovering]);
-
-  return (
-    <>
-      <style>{`
-        @media print { .custom-cursor-layer { display: none !important; } }
-        @keyframes glowPulse { 0%, 100% { box-shadow: 0 0 10px 2px rgba(156,163,175,0.3); } 50% { box-shadow: 0 0 20px 6px rgba(156,163,175,0.6); } }
-        @keyframes particleBurst { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; } }
-      `}</style>
-      <div className="custom-cursor-layer fixed inset-0 pointer-events-none z-[99999]">
-        <div ref={ringCursor} className="absolute top-0 left-0 w-8 h-8 -ml-4 -mt-4 rounded-full border border-gray-400/50 mix-blend-difference transition-transform duration-100 ease-out" style={{ animation: 'glowPulse 2s infinite ease-in-out' }} />
-        {particles.map((p, i) => {
-          const angle = (i / 6) * Math.PI * 2;
-          const dist = 40;
-          return (
-            <div key={p.id} className="absolute w-2 h-2 bg-gray-400 rounded-full"
-                 style={{
-                   left: p.x, top: p.y,
-                   '--tx': `${Math.cos(angle) * dist}px`, '--ty': `${Math.sin(angle) * dist}px`,
-                   animation: 'particleBurst 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards'
-                 } as React.CSSProperties}
-            />
-          );
-        })}
-      </div>
-    </>
-  );
-};
-
 export default function App() {
   const [thisWeekData, setThisWeekData] = useState<ProcessedData>({ title: "", books: [] });
   const [lastWeekData, setLastWeekData] = useState<ProcessedData>({ title: "", books: [] });
@@ -271,7 +183,6 @@ export default function App() {
   return (
     <ErrorBoundary>
     <div className="h-screen w-screen bg-gradient-to-br from-indigo-50/50 via-purple-50/50 to-blue-50/50 overflow-hidden flex flex-col font-sans main-desktop-wrapper text-slate-800 relative">
-      {!isMobile && <CustomCursor />}
       <Toaster position="top-center" />
       
       <div className="z-50 relative topbar-wrapper">
@@ -302,12 +213,20 @@ export default function App() {
         ref={canvasRef}
         onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}
       >
-        <div className="absolute top-5 left-5 z-40 glass-panel shadow-sm text-slate-700 px-4 py-2 rounded-2xl text-xs font-medium pointer-events-none canvas-hint transition-all duration-300">
+        <div className="absolute top-5 left-5 z-40 glass-panel shadow-sm text-indigo-700 font-bold bg-white/70 backdrop-blur-md px-4 py-2 rounded-2xl text-xs pointer-events-none canvas-hint transition-all duration-300">
           ✨ 휠: 상하 이동 | Ctrl + 휠: 확대/축소 | 드래그: 자유 이동
         </div>
 
         <div 
-          style={{ transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`, transformOrigin: '0 0', display: 'flex', gap: '48px', alignItems: 'flex-start', position: 'absolute' }}
+          style={{ 
+            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`, 
+            transformOrigin: '0 0', 
+            display: 'flex', 
+            gap: '48px', 
+            alignItems: 'flex-start', 
+            position: 'absolute',
+            transition: isDragging ? 'none' : 'transform 0.15s ease-out' /* 부드러운 휠 스크롤 적용 */
+          }}
           className={`canvas-content ${printingId ? "print:transform-none print:static" : ""}`}
         >
           {lists.map(list => (
