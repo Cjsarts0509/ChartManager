@@ -22,9 +22,6 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
-// ==========================================
-// Custom Cursor Component (모양 경계선 광원 + 파티클)
-// ==========================================
 const CustomCursor = () => {
   const mainCursor = useRef<HTMLDivElement>(null);
   const [isHovering, setIsHovering] = useState(false);
@@ -63,7 +60,6 @@ const CustomCursor = () => {
 
     const loop = () => {
       if (mainCursor.current) {
-        // 즉각적인 추적 (Lerp 제거하여 부자연스러움 방지)
         mainCursor.current.style.transform = `translate3d(${mousePos.current.x}px, ${mousePos.current.y}px, 0) scale(${isClicking ? 0.8 : isHovering ? 1.2 : 1})`;
       }
       requestRef.current = requestAnimationFrame(loop);
@@ -83,13 +79,11 @@ const CustomCursor = () => {
     <>
       <style>{`body { cursor: none !important; } @media print { body { cursor: auto !important; } .custom-cursor-layer { display: none !important; } }`}</style>
       <div className="custom-cursor-layer fixed inset-0 pointer-events-none z-[99999] overflow-hidden">
-        {/* Main Cursor with Shape Bound Glow */}
         <div ref={mainCursor} className="absolute top-0 left-0 transition-transform duration-100 ease-out origin-top-left" style={{ willChange: 'transform' }}>
           <svg viewBox="0 0 24 32" width="22" height="28" style={{ animation: 'cursorShapeGlow 2s infinite ease-in-out' }}>
             <path d="M 1 1 L 1 25 L 7.5 19 L 12.5 28 L 16 26 L 11 17 L 19 17 Z" fill="#374151" stroke="#ffffff" strokeWidth="1.5" />
           </svg>
         </div>
-        {/* Click Particles */}
         {particles.map((p, i) => {
           const angle = (i / 6) * Math.PI * 2;
           const dist = 35;

@@ -1,279 +1,192 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { TopBar } from './components/TopBar';
-import { ListCard } from './components/ListCard';
-import { MobileView } from './components/MobileView';
-import { UploadConfirmDialog } from './components/UploadConfirmDialog';
-import { CategoryConfigDialog } from './components/CategoryConfigDialog';
-import { ProcessedData } from '../lib/types';
-import { parseExcel, parseExcelFromBuffer, extractWeekKey } from '../lib/excel';
-import { fetchCloudFiles, uploadToCloud, downloadFileAsBuffer, computeFileHash, CloudFilesResponse, fetchStorePartConfig, PartConfig, getDefaultParts, installGlobalErrorLogger, writeErrorLog } from '../lib/cloud';
-import { Store } from '../lib/constants';
-import { Toaster, toast } from 'sonner';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import { motion } from 'framer-motion';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
+import { Upload, Plus, Printer, ExternalLink, RefreshCw, FileText, MapPin, Search, X, ChevronDown, Settings, Layers, Download, Trash2, DownloadCloud } from 'lucide-react';
+import { CloudFilesResponse } from '../../lib/cloud';
+import { STORES, Store } from '../../lib/constants';
+import { PartConfig } from '../../lib/cloud';
+import { InlineNoticePanel } from './NoticeBoard';
 
-function useIsMobile(breakpoint = 768) {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < breakpoint);
-  useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < breakpoint);
-    window.addEventListener('resize', handler);
-    return () => window.removeEventListener('resize', handler);
-  }, [breakpoint]);
-  return isMobile;
+interface TopBarProps {
+  titleThisWeek: string;
+  titleLastWeek: string;
+  onUploadFile: (file: File) => void;
+  onAddList: () => void;
+  onPrint: () => void;
+  onPrintA4: () => void;
+  cloudInfo: CloudFilesResponse | null;
+  cloudLoading: boolean;
+  onRefreshCloud: () => void;
+  selectedStore: Store | null;
+  onSelectStore: (store: Store | null) => void;
+  onOpenCategoryConfig: () => void;
+  storeParts?: PartConfig[];
+  selectedPartId?: string | null;
+  onSelectPart?: (partId: string | null) => void;
+  onLoadPartLists?: () => void;
+  onClearLists?: () => void;
 }
 
-// ==========================================
-// Custom Cursor Component (모양 경계선 광원 + 파티클)
-// ==========================================
-const CustomCursor = () => {
-  const mainCursor = useRef<HTMLDivElement>(null);
-  const [isHovering, setIsHovering] = useState(false);
-  const [isClicking, setIsClicking] = useState(false);
-  const [particles, setParticles] = useState<{ id: number; x: number; y: number }[]>([]);
-  const mousePos = useRef({ x: -100, y: -100 });
-  const requestRef = useRef<number>();
+export const TopBar: React.FC<TopBarProps> = ({
+  titleThisWeek, titleLastWeek, onUploadFile, onAddList, onPrint, onPrintA4, cloudInfo, cloudLoading, onRefreshCloud, selectedStore, onSelectStore, onOpenCategoryConfig, storeParts, selectedPartId, onSelectPart, onLoadPartLists, onClearLists
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showStorePanel, setShowStorePanel] = useState(false);
+  const [showPartPanel, setShowPartPanel] = useState(false);
+  const [storeSearch, setStoreSearch] = useState("");
+  const storePanelRef = useRef<HTMLDivElement>(null);
+  const partPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => { mousePos.current = { x: e.clientX, y: e.clientY }; };
-    const onMouseDown = () => {
-      setIsClicking(true);
-      const newParticles = Array.from({ length: 6 }).map((_, i) => ({
-        id: Date.now() + i,
-        x: mousePos.current.x,
-        y: mousePos.current.y
-      }));
-      setParticles(newParticles);
-      setTimeout(() => setParticles([]), 600);
+    if (!showStorePanel && !showPartPanel) return;
+    const handler = (e: MouseEvent) => {
+      if (showStorePanel && storePanelRef.current && !storePanelRef.current.contains(e.target as Node)) { setShowStorePanel(false); setStoreSearch(""); }
+      if (showPartPanel && partPanelRef.current && !partPanelRef.current.contains(e.target as Node)) { setShowPartPanel(false); }
     };
-    const onMouseUp = () => setIsClicking(false);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showStorePanel, showPartPanel]);
 
-    const updateHoverState = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('a, button, input, select, textarea, [role="button"], .cursor-pointer')) {
-        setIsHovering(true);
-      } else {
-        setIsHovering(false);
-      }
-    };
+  const filteredStores = useMemo(() => {
+    if (!storeSearch.trim()) return STORES;
+    const q = storeSearch.trim().toLowerCase(); return STORES.filter(s => s.name.toLowerCase().includes(q) || s.code.includes(q));
+  }, [storeSearch]);
 
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mouseup', onMouseUp);
-    window.addEventListener('mouseover', updateHoverState);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files && e.target.files[0]) onUploadFile(e.target.files[0]); e.target.value = ''; };
+  const handleSelectStore = (store: Store) => { onSelectStore(store); setShowStorePanel(false); setStoreSearch(""); };
+  const handleClearStore = (e: React.MouseEvent) => { e.stopPropagation(); onSelectStore(null); };
 
-    const loop = () => {
-      if (mainCursor.current) {
-        // 즉각적인 추적 (Lerp 제거하여 부자연스러움 방지)
-        mainCursor.current.style.transform = `translate3d(${mousePos.current.x}px, ${mousePos.current.y}px, 0) scale(${isClicking ? 0.8 : isHovering ? 1.2 : 1})`;
-      }
-      requestRef.current = requestAnimationFrame(loop);
-    };
-    requestRef.current = requestAnimationFrame(loop);
+  const handleDownloadCloudFile = async (url?: string, filename?: string) => {
+    if (!url) return;
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename || 'download.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (e) {
+      window.open(url, '_blank');
+    }
+  };
 
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mouseup', onMouseUp);
-      window.removeEventListener('mouseover', updateHoverState);
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    };
-  }, [isClicking, isHovering]);
+  const selectedPart = storeParts?.find(p => p.id === selectedPartId) || null;
+  const BOARD_URL = "https://link.kyobobook.co.kr/po/board?MENUID=316&SYSID=14&_t=1772194249235";
+  const formatDate = (iso?: string) => {
+    if (!iso) return ''; const d = new Date(iso); return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+
+  const thisWeekCloud = cloudInfo?.thisWeek;
+  const lastWeekCloud = cloudInfo?.lastWeek;
+  const hasParts = storeParts && storeParts.length > 0;
 
   return (
-    <>
-      <style>{`body { cursor: none !important; } @media print { body { cursor: auto !important; } .custom-cursor-layer { display: none !important; } }`}</style>
-      <div className="custom-cursor-layer fixed inset-0 pointer-events-none z-[99999] overflow-hidden">
-        {/* Main Cursor with Shape Bound Glow */}
-        <div ref={mainCursor} className="absolute top-0 left-0 transition-transform duration-100 ease-out origin-top-left" style={{ willChange: 'transform' }}>
-          <svg viewBox="0 0 24 32" width="22" height="28" style={{ animation: 'cursorShapeGlow 2s infinite ease-in-out' }}>
-            <path d="M 1 1 L 1 25 L 7.5 19 L 12.5 28 L 16 26 L 11 17 L 19 17 Z" fill="#374151" stroke="#ffffff" strokeWidth="1.5" />
-          </svg>
+    <div className="glass-panel print:hidden relative z-50">
+      <div className="px-3 py-2 flex justify-center">
+        <div className="flex items-stretch gap-2">
+            <div className="border-2 border-dashed border-slate-300/60 rounded-2xl px-5 flex flex-col items-center justify-center gap-0.5 bg-white/40 hover:bg-white hover:border-slate-400 hover:shadow-md smooth-transition active:scale-95 cursor-pointer min-w-[158px] h-[60px]" onClick={() => fileInputRef.current?.click()}>
+              <Upload size={22} className="text-slate-500 transition-transform duration-300 group-hover:scale-110 mb-0.5" />
+              <span className="text-[11px] font-bold text-slate-700 text-center whitespace-nowrap">엑셀 파일 업로드</span>
+              <span className="text-[8px] text-slate-400 text-center">주간 베스트셀러 (xlsx)</span>
+              <input type="file" accept=".xlsx, .xls" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
+            </div>
+
+            <div className="flex flex-col gap-1.5 min-w-0 justify-center h-[60px]" style={{ flex: '0 1 380px' }}>
+              <div onClick={() => handleDownloadCloudFile(thisWeekCloud?.url, thisWeekCloud?.filename)} className={`border border-white/60 shadow-sm rounded-xl px-3 py-1 bg-white/60 backdrop-blur-sm flex items-center gap-2 smooth-transition ${thisWeekCloud?.exists ? 'hover:bg-white/90 hover:scale-[1.02] cursor-pointer hover:shadow-md' : 'cursor-default'}`} title={thisWeekCloud?.exists ? "클릭하여 원본 엑셀 다운로드" : ""}>
+                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100/80 px-1.5 py-0.5 rounded-md shrink-0">최신</span>
+                {thisWeekCloud?.exists ? (
+                  <div className="flex-1 min-w-0 flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-800 truncate flex-1">{thisWeekCloud.title || thisWeekCloud.filename}</span>
+                    <span className="text-[10px] text-slate-400 shrink-0 font-mono text-center w-[72px]">{thisWeekCloud.weekKey}</span>
+                    <span className="text-[10px] text-slate-400 shrink-0 text-center w-[68px]">{formatDate(thisWeekCloud.uploadedAt)}</span>
+                    <DownloadCloud size={14} className="text-emerald-500/70" />
+                  </div>
+                ) : <span className="text-xs text-slate-400 truncate">{titleThisWeek || "파일 없음"}</span>}
+              </div>
+
+              <div onClick={() => handleDownloadCloudFile(lastWeekCloud?.url, lastWeekCloud?.filename)} className={`border border-white/60 shadow-sm rounded-xl px-3 py-1 bg-white/60 backdrop-blur-sm flex items-center gap-2 smooth-transition ${lastWeekCloud?.exists ? 'hover:bg-white/90 hover:scale-[1.02] cursor-pointer hover:shadow-md' : 'cursor-default'}`} title={lastWeekCloud?.exists ? "클릭하여 원본 엑셀 다운로드" : ""}>
+                <span className="text-[10px] font-bold text-orange-600 bg-orange-100/80 px-1.5 py-0.5 rounded-md shrink-0">이전</span>
+                {lastWeekCloud?.exists ? (
+                  <div className="flex-1 min-w-0 flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-800 truncate flex-1">{lastWeekCloud.title || lastWeekCloud.filename}</span>
+                    <span className="text-[10px] text-slate-400 shrink-0 font-mono text-center w-[72px]">{lastWeekCloud.weekKey}</span>
+                    <span className="text-[10px] text-slate-400 shrink-0 text-center w-[68px]">{formatDate(lastWeekCloud.uploadedAt)}</span>
+                    <DownloadCloud size={14} className="text-orange-500/70" />
+                  </div>
+                ) : <span className="text-xs text-slate-400 truncate">{titleLastWeek || "파일 없음"}</span>}
+              </div>
+            </div>
+
+            <div className="flex gap-1.5 shrink-0 h-[60px]">
+              <InlineNoticePanel />
+              <button onClick={onRefreshCloud} disabled={cloudLoading} className="flex flex-col items-center justify-center bg-emerald-50/80 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/50 w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md disabled:opacity-50"><RefreshCw size={22} className={`mb-1 ${cloudLoading ? 'animate-spin' : ''}`} /><span className="text-[11px] font-bold whitespace-nowrap">{cloudLoading ? '동기화중' : '클라우드'}</span></button>
+              <a href={BOARD_URL} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center bg-blue-50/80 hover:bg-blue-100 text-blue-700 border border-blue-200/50 w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md"><ExternalLink size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap">게시판</span></a>
+              <button onClick={onAddList} className="flex flex-col items-center justify-center bg-slate-100/80 hover:bg-slate-200 text-slate-700 border border-slate-200/50 w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md"><Plus size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap">페이지추가</span></button>
+              <button onClick={onPrint} className="flex flex-col items-center justify-center bg-white/80 hover:bg-white text-slate-700 border border-white/60 w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]"><Printer size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap">전체인쇄</span></button>
+              <button onClick={onPrintA4} className="flex flex-col items-center justify-center bg-amber-50/80 hover:bg-amber-100 text-amber-700 border border-amber-200/50 w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md"><FileText size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap">A4인쇄</span></button>
+              <button onClick={onOpenCategoryConfig} className="flex flex-col items-center justify-center bg-slate-50/80 hover:bg-slate-100 text-slate-700 border border-slate-200/50 w-[72px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-md"><Settings size={22} className="mb-1" /><span className="text-[11px] font-bold whitespace-nowrap text-center">설정</span></button>
+            </div>
+
+            <div className="w-px bg-slate-200/60 shrink-0 my-1 rounded-full ml-1" />
+
+            <div className="flex flex-col gap-1 min-w-0 justify-center h-[60px]" style={{ flex: '0 1 360px' }}>
+              <div className="relative" ref={storePanelRef}>
+                <button onClick={() => { setShowStorePanel(prev => !prev); setShowPartPanel(false); }} className={`w-full flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] smooth-transition active:scale-[0.98] border shadow-sm ${selectedStore ? 'bg-emerald-50/90 border-emerald-200/60 text-emerald-800 hover:shadow-md' : 'bg-white/60 border-white/80 text-slate-500 hover:bg-white hover:shadow-md'}`}>
+                  <MapPin size={12} className={selectedStore ? 'text-emerald-600' : 'text-slate-400'} />
+                  {selectedStore ? <span className="font-semibold flex-1 text-left truncate"><span className="text-emerald-500 font-mono mr-1.5">{selectedStore.code}</span>{selectedStore.name}</span> : <span className="flex-1 text-left text-slate-400 text-[10px]">영업점 선택</span>}
+                  {selectedStore && <span onClick={handleClearStore} className="p-1 rounded-full hover:bg-emerald-200/60 smooth-transition"><X size={10} className="text-emerald-600" /></span>}
+                  <ChevronDown size={12} className={`transition-transform duration-300 shrink-0 ${showStorePanel ? 'rotate-180' : ''}`} />
+                </button>
+                {showStorePanel && (
+                  <div className="glass-panel absolute left-0 right-0 top-full mt-2 bg-white/95 rounded-2xl z-[60] overflow-hidden origin-top animate-in fade-in slide-in-from-top-2">
+                    <div className="p-2 border-b border-slate-100/60">
+                      <div className="flex items-center gap-2 bg-slate-50/80 rounded-xl px-3 py-2 border border-slate-100"><Search size={14} className="text-slate-400 shrink-0" /><input type="text" value={storeSearch} onChange={(e) => setStoreSearch(e.target.value)} placeholder="코드/영업점명 검색" className="flex-1 bg-transparent text-sm outline-none placeholder-slate-400 text-slate-700" autoFocus />{storeSearch && <button onClick={() => setStoreSearch("")} className="p-0.5 hover:bg-slate-200 rounded-full transition-colors"><X size={12} className="text-slate-400" /></button>}</div>
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                      {filteredStores.map(store => {
+                        const isSelected = selectedStore?.code === store.code;
+                        return (
+                          <button key={store.code} onClick={() => handleSelectStore(store)} className={`w-full flex items-center gap-3 px-4 py-3 text-left smooth-transition active:bg-slate-200 ${isSelected ? 'bg-emerald-50/80' : 'hover:bg-slate-100/50'}`}>
+                            <span className={`font-mono text-xs w-8 shrink-0 ${isSelected ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>{store.code}</span><span className={`text-sm flex-1 ${isSelected ? 'text-emerald-800 font-semibold' : 'text-slate-700'}`}>{store.name}</span>{isSelected && <div className="w-2 h-2 bg-emerald-500 rounded-full shrink-0 shadow-sm" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <div className="flex-1 relative min-w-0" ref={partPanelRef}>
+                  <button onClick={() => { if (hasParts) { setShowPartPanel(prev => !prev); setShowStorePanel(false); } }} className={`w-full flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] smooth-transition active:scale-[0.98] border shadow-sm ${selectedPart ? 'bg-blue-50/90 border-blue-200/60 text-blue-800 hover:shadow-md' : hasParts ? 'bg-white/60 border-white/80 text-slate-500 hover:bg-white hover:shadow-md' : 'bg-slate-50/50 border-transparent text-slate-400 cursor-default shadow-none'}`}>
+                    <Layers size={12} className={selectedPart ? 'text-blue-600' : 'text-slate-400'} />
+                    {selectedPart ? <span className="font-semibold flex-1 text-left truncate">{selectedPart.name}<span className="text-blue-400 ml-1.5 text-[9px] bg-blue-100/50 px-1 py-0.5 rounded-md">{selectedPart.categories.length}개</span></span> : <span className="flex-1 text-left text-slate-400 text-[10px] truncate">{!selectedStore ? '영업점 먼저 선택' : hasParts ? '파트 선택' : '파트 없음'}</span>}
+                    {selectedPart && <span onClick={(e) => { e.stopPropagation(); onSelectPart?.(null); }} className="p-1 rounded-full hover:bg-blue-200/60 transition-colors"><X size={10} className="text-blue-600" /></span>}
+                    {hasParts && <ChevronDown size={12} className={`transition-transform duration-300 shrink-0 ${showPartPanel ? 'rotate-180' : ''}`} />}
+                  </button>
+                  {showPartPanel && hasParts && (
+                    <div className="glass-panel absolute left-0 right-0 top-full mt-2 bg-white/80 rounded-2xl z-[60] overflow-hidden origin-top animate-in fade-in slide-in-from-top-2">
+                      <div className="max-h-[300px] overflow-y-auto custom-scrollbar py-1">
+                        {storeParts!.map((part, idx) => {
+                          const isSelected = selectedPartId === part.id;
+                          return (
+                            <button key={part.id} onClick={() => { onSelectPart?.(part.id); setShowPartPanel(false); }} className={`w-full flex items-center gap-3 px-4 py-3 text-left smooth-transition active:bg-slate-200 ${isSelected ? 'bg-blue-50/80' : 'hover:bg-slate-100/50'}`}>
+                              <Layers size={14} className={isSelected ? 'text-blue-500' : 'text-slate-300'} /><span className={`font-mono text-xs w-7 shrink-0 ${isSelected ? 'text-blue-500' : 'text-slate-400'}`}>{String(idx + 1).padStart(3, '0')}</span><span className={`text-sm flex-1 ${isSelected ? 'text-blue-800 font-semibold' : 'text-slate-700'}`}>{part.name}</span><span className={`text-[10px] shrink-0 ${isSelected ? 'text-blue-500 bg-blue-100/50 px-1.5 py-0.5 rounded-md' : 'text-slate-400'}`}>{part.categories.length}개</span>{isSelected && <div className="w-2 h-2 bg-blue-500 rounded-full shrink-0 shadow-sm" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <button onClick={onLoadPartLists} disabled={!selectedPart} className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] smooth-transition active:scale-95 border whitespace-nowrap shadow-sm ${selectedPart ? 'bg-indigo-600 hover:bg-indigo-700 hover:-translate-y-0.5 hover:shadow-md text-white border-indigo-600 cursor-pointer' : 'bg-slate-100/50 text-slate-400 border-transparent cursor-not-allowed shadow-none'}`}><Download size={12} /><span className="font-semibold">불러오기</span></button>
+                <button onClick={onClearLists} className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] smooth-transition active:scale-95 border bg-white/60 hover:bg-red-50 hover:-translate-y-0.5 hover:shadow-md text-slate-500 hover:text-red-600 border-white/80 hover:border-red-200 whitespace-nowrap shadow-sm"><Trash2 size={12} /><span className="font-semibold">초기화</span></button>
+              </div>
+            </div>
         </div>
-        {/* Click Particles */}
-        {particles.map((p, i) => {
-          const angle = (i / 6) * Math.PI * 2;
-          const dist = 35;
-          return (
-            <div key={p.id} className="absolute w-1.5 h-1.5 bg-gray-400 rounded-full"
-                 style={{
-                   left: p.x, top: p.y,
-                   '--tx': `${Math.cos(angle) * dist}px`, '--ty': `${Math.sin(angle) * dist}px`,
-                   animation: 'particleBurst 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards'
-                 } as React.CSSProperties}
-            />
-          );
-        })}
       </div>
-    </>
+    </div>
   );
 };
-
-export default function App() {
-  const [thisWeekData, setThisWeekData] = useState<ProcessedData>({ title: "", books: [] });
-  const [lastWeekData, setLastWeekData] = useState<ProcessedData>({ title: "", books: [] });
-  const [lists, setLists] = useState<{ id: string; defaultGroupCode?: string; defaultLimit?: number }[]>([{ id: 'init-1' }]);
-  const [printingId, setPrintingId] = useState<string | null>(null);
-  const [printMode, setPrintMode] = useState<'normal' | 'a4' | null>(null);
-  const [uploadConfirm, setUploadConfirm] = useState<{ file: File; weekKey: string; title: string; existingTitle?: string; fileHash?: string; } | null>(null);
-  const [cloudInfo, setCloudInfo] = useState<CloudFilesResponse | null>(null);
-  const [cloudLoading, setCloudLoading] = useState(false);
-  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
-  const [showCategoryConfig, setShowCategoryConfig] = useState(false);
-  const [storeParts, setStoreParts] = useState<PartConfig[]>([]);
-  const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
-
-  const selectedPart = storeParts.find(p => p.id === selectedPartId) || null;
-  const activeCategories = selectedPart ? selectedPart.categories.map(c => c.code) : null;
-  const categoryRanks = selectedPart ? Object.fromEntries(selectedPart.categories.map(c => [c.code, c.rank])) : undefined;
-
-  const [scale, setScale] = useState(1);
-  const [position, setPosition] = useState({ x: 50, y: 50 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ x: 0, y: 0 });
-  const canvasRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { installGlobalErrorLogger(); }, []);
-
-  useEffect(() => {
-    if (!selectedStore) { setStoreParts([]); setSelectedPartId(null); return; }
-    setLists([{ id: 'init-1' }]); setPosition({ x: 50, y: 50 });
-    let cancelled = false;
-    fetchStorePartConfig(selectedStore.code).then(config => {
-      if (cancelled) return;
-      if (config && config.length > 0) { setStoreParts(config); setSelectedPartId(config[0].id); } 
-      else { setStoreParts(getDefaultParts()); setSelectedPartId(getDefaultParts()[0].id); }
-    });
-    return () => { cancelled = true; };
-  }, [selectedStore]);
-
-  const handleLoadPartLists = useCallback(() => {
-    if (selectedPart && selectedPart.categories.length > 0) {
-      const autoLists = selectedPart.categories.map((cat, idx) => ({ id: `part-${selectedPart.id}-cat-${idx}`, defaultGroupCode: cat.code, defaultLimit: cat.rank, }));
-      setLists(autoLists); setPosition({ x: 50, y: 50 }); toast.success(`${selectedPart.name} 파트의 ${selectedPart.categories.length}개 리스트를 불러왔습니다`);
-    } else { toast.info('선택된 파트에 등록된 조코드가 없습니다'); }
-  }, [selectedPart]);
-
-  const handleClearLists = useCallback(() => { setLists([{ id: 'init-1' }]); setPosition({ x: 50, y: 50 }); toast.success('리스트가 초기화되었습니다'); }, []);
-
-  const isMobile = useIsMobile();
-
-  const loadFromCloud = useCallback(async (silent = false) => {
-    setCloudLoading(true);
-    try {
-      const info = await fetchCloudFiles();
-      setCloudInfo(info);
-      let loaded = 0;
-      if (info.thisWeek?.exists && info.thisWeek.url) { try { const buffer = await downloadFileAsBuffer(info.thisWeek.url); setThisWeekData(parseExcelFromBuffer(buffer)); loaded++; } catch (e) {} }
-      if (info.lastWeek?.exists && info.lastWeek.url) { try { const buffer = await downloadFileAsBuffer(info.lastWeek.url); setLastWeekData(parseExcelFromBuffer(buffer)); loaded++; } catch (e) {} }
-      if (!silent) { if (loaded > 0) toast.success(`클라우드에서 ${loaded}개 파일을 불러왔습니다`); else toast.info('클라우드에 업로드된 파일이 없습니다'); }
-    } catch (e) { if (!silent) toast.error('클라우드 연결 실패'); } finally { setCloudLoading(false); }
-  }, []);
-
-  useEffect(() => { loadFromCloud(true); }, [loadFromCloud]);
-
-  useEffect(() => {
-    const handler = () => setPrintMode(null); window.addEventListener('afterprint', handler); return () => window.removeEventListener('afterprint', handler);
-  }, []);
-
-  const handleFileUpload = async (file: File) => {
-    try {
-      if (file.size > 3 * 1024 * 1024) return toast.error('파일 용량 초과: 최대 3MB');
-      const data = await parseExcel(file);
-      const weekKey = extractWeekKey(data.title);
-      if (!weekKey) return toast.error('주차 정보를 찾을 수 없습니다.');
-      const fileHash = await computeFileHash(file);
-      const existingFile = [cloudInfo?.thisWeek, cloudInfo?.lastWeek].find(f => f?.exists && f.weekKey === weekKey);
-      if (existingFile) {
-        if (existingFile.fileHash === fileHash) return toast.info('동일한 파일이 이미 있습니다.');
-        setUploadConfirm({ file, weekKey, title: data.title, existingTitle: existingFile.title || existingFile.filename, fileHash }); return;
-      }
-      await doUpload(file, weekKey, data.title, fileHash);
-    } catch (e) { toast.error("파일 처리 실패"); }
-  };
-
-  const doUpload = async (file: File, weekKey: string, title: string, fileHash?: string) => {
-    try { await uploadToCloud(file, weekKey, title, fileHash); toast.success(`${weekKey} 업로드 완료`); } catch (e) { toast.error('업로드 실패'); }
-    await loadFromCloud(true);
-  };
-
-  const handleUploadConfirm = async () => { if (!uploadConfirm) return; const { file, weekKey, title, fileHash } = uploadConfirm; setUploadConfirm(null); await doUpload(file, weekKey, title, fileHash); };
-  const handleUploadCancel = () => { setUploadConfirm(null); toast.info('업로드 취소됨'); };
-  const handleAddList = () => setLists(prev => [...prev, { id: `list-${Date.now()}` }]);
-  const handleDeleteList = (id: string) => setLists(prev => prev.filter(l => l.id !== id));
-  const handleGlobalPrint = () => window.print();
-  const handleGlobalPrintA4 = () => { setPrintMode('a4'); setTimeout(() => { window.print(); setPrintMode(null); }, 100); };
-  const handlePrintCard = (id: string) => { setPrintingId(id); setTimeout(() => { window.print(); setPrintingId(null); }, 100); };
-
-  useEffect(() => {
-    const el = canvasRef.current; if (!el || isMobile) return;
-    const handler = (e: WheelEvent) => {
-      e.preventDefault();
-      if (e.ctrlKey) setScale(prev => Math.min(Math.max(0.1, prev - e.deltaY * 0.001), 3));
-      else setPosition(prev => ({ x: prev.x - (e.shiftKey ? e.deltaY : e.deltaX) * 1.5, y: prev.y - (e.shiftKey ? 0 : e.deltaY) * 1.5 }));
-    };
-    el.addEventListener('wheel', handler, { passive: false }); return () => el.removeEventListener('wheel', handler);
-  }, [isMobile]);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('a, button, input, select, textarea, [role="button"], [data-no-drag]')) return;
-    setIsDragging(true); dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => { if (isDragging) { e.preventDefault(); setPosition({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y }); } };
-  const handleMouseUp = () => setIsDragging(false);
-
-  if (isMobile) {
-    return (
-      <ErrorBoundary>
-        <Toaster position="top-center" />
-        <MobileView thisWeekBooks={thisWeekData.books} lastWeekBooks={lastWeekData.books} title={thisWeekData.title} lastWeekTitle={lastWeekData.title} cloudLoading={cloudLoading} cloudInfo={cloudInfo} onRefreshCloud={() => loadFromCloud(false)} />
-      </ErrorBoundary>
-    );
-  }
-
-  return (
-    <ErrorBoundary>
-    <div className="h-screen w-screen bg-gradient-to-br from-indigo-50/50 via-purple-50/50 to-blue-50/50 overflow-hidden flex flex-col font-sans main-desktop-wrapper text-slate-800 relative">
-      {!isMobile && <CustomCursor />}
-      <Toaster position="top-center" />
-      
-      <div className="z-50 relative topbar-wrapper">
-        <TopBar titleThisWeek={thisWeekData.title} titleLastWeek={lastWeekData.title} onUploadFile={handleFileUpload} onAddList={handleAddList} onPrint={handleGlobalPrint} onPrintA4={handleGlobalPrintA4} cloudInfo={cloudInfo} cloudLoading={cloudLoading} onRefreshCloud={() => loadFromCloud(false)} selectedStore={selectedStore} onSelectStore={setSelectedStore} onOpenCategoryConfig={() => setShowCategoryConfig(true)} storeParts={storeParts} selectedPartId={selectedPartId} onSelectPart={setSelectedPartId} onLoadPartLists={handleLoadPartLists} onClearLists={handleClearLists} />
-      </div>
-
-      <div className="flex-1 relative overflow-hidden canvas-area" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(15, 23, 42, 0.05) 1px, transparent 0)', backgroundSize: '32px 32px' }} ref={canvasRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-        <div className="absolute top-5 left-5 z-40 glass-panel shadow-sm text-slate-700 px-4 py-2 rounded-2xl text-xs font-medium pointer-events-none canvas-hint transition-all duration-300">
-          ✨ 휠: 상하 이동 | Ctrl + 휠: 확대/축소 | 드래그: 자유 이동
-        </div>
-
-        <div style={{ transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`, transformOrigin: '0 0', display: 'flex', gap: '48px', alignItems: 'flex-start', position: 'absolute' }} className={`canvas-content ${printingId ? "print:transform-none print:static" : ""}`}>
-          {lists.map(list => (
-            <motion.div 
-              layout 
-              initial={{ opacity: 0, scale: 0.96, y: 20 }} 
-              animate={{ opacity: 1, scale: 1, y: 0 }} 
-              transition={{ type: "tween", ease: "easeOut", duration: 0.4 }}
-              key={list.id} 
-              className={`list-wrapper smooth-transition hover:-translate-y-2 hover:shadow-2xl rounded-[2rem] p-2 ${printingId && printingId !== list.id ? "print:hidden" : "print:block"}`}
-            >
-              <ListCard id={list.id} thisWeekBooks={thisWeekData.books} lastWeekBooks={lastWeekData.books} title={thisWeekData.title} lastWeekTitle={lastWeekData.title} onDelete={() => handleDeleteList(list.id)} onPrint={handlePrintCard} storeCode={selectedStore?.code} storeName={selectedStore?.name} availableCategories={activeCategories || undefined} categoryRanks={categoryRanks} defaultGroupCode={list.defaultGroupCode} defaultLimit={list.defaultLimit} />
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      <style>{`
-        @media print {
-          @page { margin: 5mm; } body, html { -webkit-print-color-adjust: exact; print-color-adjust: exact; overflow: visible !important; height: auto !important; width: auto !important; }
-          .main-desktop-wrapper { height: auto !important; overflow: visible !important; display: block !important; background: white !important; }
-          .topbar-wrapper, .canvas-hint { display: none !important; } .canvas-area { overflow: visible !important; height: auto !important; position: static !important; background: none !important; }
-          .list-wrapper { background: none !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
-          ${printMode === 'a4' ? `@page { size: A4 portrait; margin: 5mm; } .canvas-content { transform: none !important; position: static !important; display: flex !important; flex-wrap: wrap !important; gap: 0 !important; width: 100% !important; } .list-wrapper { display: block !important; width: 50% !important; box-sizing: border-box !important; padding: 0 2mm !important; page-break-after: auto !important; break-after: auto !important; page-break-inside: avoid !important; break-inside: avoid !important; } .list-wrapper:nth-child(2n) { page-break-after: always !important; break-after: page !important; } .list-card-print { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 2px !important; box-shadow: none !important; border: none !important; }` : `.canvas-content { transform: none !important; position: static !important; display: block !important; gap: 0 !important; } .list-wrapper { display: block !important; page-break-after: always !important; break-after: page !important; } .list-card-print { width: 400px !important; max-width: 400px !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: none !important; }`}
-        }
-      `}</style>
-      {uploadConfirm && <UploadConfirmDialog weekKey={uploadConfirm.weekKey} title={uploadConfirm.title} existingTitle={uploadConfirm.existingTitle} contentChanged={true} onConfirm={handleUploadConfirm} onCancel={handleUploadCancel} />}
-      {showCategoryConfig && <CategoryConfigDialog open={showCategoryConfig} onClose={() => setShowCategoryConfig(false)} initialStore={selectedStore} onSaved={(storeCode, parts) => { if (selectedStore && selectedStore.code === storeCode) { setStoreParts(parts); if (parts.length > 0) { if (!parts.find(p => p.id === selectedPartId)) setSelectedPartId(parts[0].id); } else setSelectedPartId(null); } }} />}
-    </div>
-    </ErrorBoundary>
-  );
-}
