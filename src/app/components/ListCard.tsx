@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { Book, BookWithTrend } from '../../lib/types';
 import { getComparison } from '../../lib/compare';
 import { CATEGORIES } from '../../lib/constants';
@@ -146,10 +147,6 @@ export const ListCard: React.FC<ListCardProps> = ({
 
     let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
 <head><meta charset="utf-8">
-<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>
-<x:ExcelWorksheet><x:Name>이번주</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>
-<x:ExcelWorksheet><x:Name>지난주</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>
-</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
 <style>td{font-family:sans-serif;font-size:10px;vertical-align:middle;}</style></head><body>`;
 
     // 시트1: 이번주
@@ -169,18 +166,23 @@ export const ListCard: React.FC<ListCardProps> = ({
   };
 
   return (
-    <div 
+    <motion.div 
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
       id={`list-card-${id}`}
-      className="list-card-print bg-white p-4 shadow-xl border border-gray-200 flex flex-col items-center print:shadow-none print:border-none print:p-0 select-none"
+      className="list-card-print glass-panel p-4 rounded-xl flex flex-col items-center print:shadow-none print:border-none print:bg-white print:p-0 select-none"
       style={{ width: 'fit-content' }}
     >
       {/* Control Panel */}
       <div className="w-full flex items-center justify-between mb-2 print:hidden min-w-[300px]">
         <div className="flex items-center gap-2">
-          <button onClick={() => onPrint(id)} className="p-1 hover:bg-gray-100 rounded text-gray-600" title="인쇄">
+          <button onClick={() => onPrint(id)} className="p-1 hover:bg-gray-100 rounded text-gray-600 smooth-transition hover:scale-110 active:scale-95" title="인쇄">
             <Printer size={16} />
           </button>
-          <button onClick={handleExcelDownload} className="p-1 hover:bg-green-100 rounded text-gray-600" title="ISBN 엑셀 다운로드">
+          <button onClick={handleExcelDownload} className="p-1 hover:bg-green-100 rounded text-gray-600 smooth-transition hover:scale-110 active:scale-95" title="ISBN 엑셀 다운로드">
             <FileDown size={16} />
           </button>
           
@@ -188,7 +190,7 @@ export const ListCard: React.FC<ListCardProps> = ({
             <select 
               value={groupCode} 
               onChange={(e) => setGroupCode(e.target.value)}
-              className="border border-gray-300 rounded px-1 py-0.5 text-sm cursor-pointer"
+              className="bg-white/50 backdrop-blur-sm border border-gray-300 rounded px-1 py-0.5 text-sm cursor-pointer smooth-transition hover:bg-white/80 focus:ring-2 focus:ring-primary/50"
             >
               {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
@@ -202,19 +204,19 @@ export const ListCard: React.FC<ListCardProps> = ({
             type="number" 
             value={limit} 
             onChange={(e) => setLimit(Number(e.target.value))}
-            className="border border-gray-300 rounded w-12 text-center py-0.5 text-sm"
+            className="bg-white/50 backdrop-blur-sm border border-gray-300 rounded w-12 text-center py-0.5 text-sm smooth-transition hover:bg-white/80 focus:ring-2 focus:ring-primary/50"
             min={1} max={50}
           />
-          <button onClick={onDelete} className="p-1 hover:bg-red-100 text-gray-400 hover:text-red-500 rounded">
+          <button onClick={onDelete} className="p-1 hover:bg-red-100 text-gray-400 hover:text-red-500 rounded smooth-transition hover:scale-110 active:scale-95">
             <X size={16} />
           </button>
         </div>
       </div>
 
       {/* Print Area */}
-      <div className="w-[400px] print:w-full bg-white">
+      <div className="w-[400px] print:w-full bg-transparent print:bg-white">
         {/* Section 1: This Week */}
-        <div className="text-center border-t-2 border-black pt-2 pb-1">
+        <div className="text-center border-t-2 border-black/80 pt-2 pb-1">
           <h3 className="font-bold text-sm">{title}</h3>
           <p className="text-[11px] text-[#888] mt-0.5 font-bold">{groupCode} 분야</p>
         </div>
@@ -222,12 +224,12 @@ export const ListCard: React.FC<ListCardProps> = ({
 
         {/* Section 2: Last Week */}
         <div className="mt-6">
-          <div className="text-center border-t border-black pt-2 pb-1">
+          <div className="text-center border-t border-black/80 pt-2 pb-1">
              <h3 className="font-bold text-sm">{lastWeekTitle || "지난주 데이터 없음"}</h3>
           </div>
           <BookTable books={pastList} storeCode={storeCode} storeName={storeName} />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
