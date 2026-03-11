@@ -14,7 +14,7 @@ interface BookTableProps {
 }
 
 export interface BookTableRef {
-  fetchAllShelves: () => void;
+  fetchAllShelves: () => Promise<void>;
 }
 
 export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, storeCode, storeName, showShelfRow }, ref) => {
@@ -83,24 +83,28 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
   }, [storeCode, isMobile, showShelfRow, expandedIsbns, fetchSingleShelf]);
 
   useImperativeHandle(ref, () => ({
-    fetchAllShelves: () => {
+    // Promise 반환하도록 변경하여 MobileView.tsx에서 await 적용이 가능하도록 했습니다.
+    fetchAllShelves: async () => {
       if (!storeCode || !showShelfRow) return;
       const isbns = books.map(b => b.isbn);
       setExpandedIsbns(new Set(isbns));
       const uncached = isbns.filter(isbn => shelfInfo[isbn] === undefined);
       if (uncached.length === 0) return;
       const sc = storeCode;
-      (async () => {
-        for (let i = 0; i < uncached.length; i++) { await fetchSingleShelf(uncached[i]); if (i < uncached.length - 1) await new Promise(r => setTimeout(r, 300 + Math.random() * 500)); }
-        const failed = uncached.filter(isbn => getShelfFromCache(sc, isbn) === null);
-        if (failed.length === 0) return;
-        for (let i = 0; i < failed.length; i++) {
-          clearShelfCacheForIsbn(sc, failed[i]);
-          setShelfInfo(prev => { const next = { ...prev }; delete next[failed[i]]; return next; });
-          await fetchSingleShelf(failed[i]);
-          if (i < failed.length - 1) await new Promise(r => setTimeout(r, 300 + Math.random() * 500));
-        }
-      })();
+
+      for (let i = 0; i < uncached.length; i++) {
+        await fetchSingleShelf(uncached[i]);
+        if (i < uncached.length - 1) await new Promise(r => setTimeout(r, 300 + Math.random() * 500));
+      }
+      const failed = uncached.filter(isbn => getShelfFromCache(sc, isbn) === null);
+      if (failed.length === 0) return;
+      
+      for (let i = 0; i < failed.length; i++) {
+        clearShelfCacheForIsbn(sc, failed[i]);
+        setShelfInfo(prev => { const next = { ...prev }; delete next[failed[i]]; return next; });
+        await fetchSingleShelf(failed[i]);
+        if (i < failed.length - 1) await new Promise(r => setTimeout(r, 300 + Math.random() * 500));
+      }
     },
   }), [storeCode, showShelfRow, books, shelfInfo, fetchSingleShelf]);
 
@@ -114,7 +118,6 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
     newWin.document.write(html); newWin.document.close();
   };
 
-  // 붉은색 OUT 서가 테마 적용
   const renderShelfCard = (shelf: ShelfResult | null | undefined, index: number, trend: string, isLoading: boolean) => {
     const isNew = trend === 'new';
     const isOut = trend === 'out';
@@ -184,6 +187,40 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
         </div>
         {selectedBookForCover && <BookCoverModal isbn={selectedBookForCover.isbn} bookTitle={selectedBookForCover.title} onClose={() => setSelectedBookForCover(null)} />}
         {isbnToastPortal}
+      </>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <>
+        <div className="w-full text-[10px] font-sans">
+          <div className="bg-[#F2F2F2]/80 backdrop-blur-md border-t-2 border-b border-black/80 font-bold text-center">
+            <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', height: '20px' }}>
+              <div className="border-r border-gray-300/80">순위</div><div className="border-r border-gray-300/80">ISBN</div><div>도서명</div>
+            </div>
+          </div>
+          {books.map((book) => {
+            const isNew = book.trend === 'new'; const isOut = book.trend === 'out'; const isHighlight = isNew || isOut;
+            return (
+              <div key={`${book.isbn}-${book.trend}`} className={clsx("border-b border-[#E1E1E1]/50 smooth-transition", isNew && "bg-blue-600/90 text-white", isOut && "bg-red-600/90 text-white", !isHighlight && "text-black bg-white/40 hover:bg-white/60")}>
+                <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', minHeight: '24px' }}>
+                  <div className={clsx("flex flex-col items-center justify-center border-r py-0.5", isHighlight ? "border-white/20" : "border-gray-200")}>
+                    <span className="font-bold">{book.rank > 0 ? book.rank : ''}</span>
+                    {book.trend === 'same' && <Minus size={8} className={isHighlight ? "text-white/60" : "text-gray-300"} />}
+                    {book.trend === 'up' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white/80" : "text-red-500")}>▲{book.trendValue}</span>}
+                    {book.trend === 'down' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white/80" : "text-blue-500")}>▼{book.trendValue}</span>}
+                    {book.trend === 'new' && <span className="text-[8px] leading-none text-white">NEW</span>}
+                    {book.trend === 'out' && <span className="text-[8px] leading-none text-white">OUT</span>}
+                  </div>
+                  <div className={clsx("text-center border-r cursor-pointer active:scale-95 text-[9px] tracking-tighter py-0.5 smooth-transition", isHighlight ? "border-white/20 text-white underline decoration-white/50" : "border-gray-200 text-[#555] underline decoration-gray-300 hover:text-blue-600")} onClick={() => setSelectedBookForCover(book)}>{book.isbn}</div>
+                  <div className="px-1.5 py-0.5 truncate font-semibold text-left">{book.title}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {selectedBookForCover && <BookCoverModal isbn={selectedBookForCover.isbn} bookTitle={selectedBookForCover.title} onClose={() => setSelectedBookForCover(null)} />}
       </>
     );
   }
