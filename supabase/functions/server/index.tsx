@@ -364,4 +364,77 @@ function doParseShelf(html: string): Array<{ location: string; category: string 
   return out;
 }
 
+// ============================================================
+// GET /notices (공지사항 목록 조회)
+// ============================================================
+app.get(`${PREFIX}/notices`, async (c) => {
+  try {
+    const entries = await kv.getByPrefix("notice-");
+    const notices = entries
+      .filter(e => e && e.id)
+      .map(e => ({
+        id: e.id, title: e.title, content: e.content, createdAt: e.createdAt, updatedAt: e.updatedAt
+      }))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return c.json({ notices });
+  } catch (e) {
+    return c.json({ error: String(e) }, 500);
+  }
+});
+
+// ============================================================
+// POST /notices (공지사항 등록)
+// ============================================================
+app.post(`${PREFIX}/notices`, async (c) => {
+  try {
+    const { password, title, content } = await c.req.json();
+    if (!password || !title || !content) return c.json({ error: "필수 항목이 누락되었습니다." }, 400);
+    const id = crypto.randomUUID();
+    const notice = { id, password, title, content, createdAt: new Date().toISOString() };
+    await kv.set(`notice-${id}`, notice);
+    return c.json({ notice: { id, title, content, createdAt: notice.createdAt } });
+  } catch (e) {
+    return c.json({ error: String(e) }, 500);
+  }
+});
+
+// ============================================================
+// PUT /notices/:id (공지사항 수정)
+// ============================================================
+app.put(`${PREFIX}/notices/:id`, async (c) => {
+  try {
+    const id = c.req.param("id");
+    const { password, title, content } = await c.req.json();
+    const existing = await kv.get(`notice-${id}`);
+    if (!existing) return c.json({ error: "게시글을 찾을 수 없습니다." }, 404);
+    if (existing.password !== password) return c.json({ error: "비밀번호가 일치하지 않습니다." }, 403);
+    
+    existing.title = title;
+    existing.content = content;
+    existing.updatedAt = new Date().toISOString();
+    await kv.set(`notice-${id}`, existing);
+    return c.json({ notice: { id, title: existing.title, content: existing.content, createdAt: existing.createdAt, updatedAt: existing.updatedAt } });
+  } catch (e) {
+    return c.json({ error: String(e) }, 500);
+  }
+});
+
+// ============================================================
+// DELETE /notices/:id (공지사항 삭제)
+// ============================================================
+app.delete(`${PREFIX}/notices/:id`, async (c) => {
+  try {
+    const id = c.req.param("id");
+    const { password } = await c.req.json();
+    const existing = await kv.get(`notice-${id}`);
+    if (!existing) return c.json({ error: "게시글을 찾을 수 없습니다." }, 404);
+    if (existing.password !== password) return c.json({ error: "비밀번호가 일치하지 않습니다." }, 403);
+    
+    await kv.del(`notice-${id}`);
+    return c.json({ success: true });
+  } catch (e) {
+    return c.json({ error: String(e) }, 500);
+  }
+});
+
 Deno.serve(app.fetch);
