@@ -26,7 +26,7 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
   const isbnToastPortal = copiedIsbn ? createPortal(
     <>
       <div className="fixed z-[9999] pointer-events-none" style={{ left: copiedIsbn.x, top: copiedIsbn.y - 40 }}>
-        <div className="liquid-btn px-3 py-1.5 rounded-xl bg-emerald-100/90 text-emerald-800 text-xs font-bold shadow-lg whitespace-nowrap -translate-x-1/2" style={{ animation: 'isbnToastFade 0.8s ease-in-out forwards' }}>
+        <div className="glass-panel px-3 py-1.5 rounded-xl bg-gray-900/80 text-white text-xs font-medium shadow-lg whitespace-nowrap -translate-x-1/2" style={{ animation: 'isbnToastFade 0.8s ease-in-out forwards' }}>
           {copiedIsbn.isbn} 복사됨
         </div>
       </div>
@@ -83,6 +83,7 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
   }, [storeCode, isMobile, showShelfRow, expandedIsbns, fetchSingleShelf]);
 
   useImperativeHandle(ref, () => ({
+    // Promise 반환하도록 변경하여 MobileView.tsx에서 await 적용이 가능하도록 했습니다.
     fetchAllShelves: async () => {
       if (!storeCode || !showShelfRow) return;
       const isbns = books.map(b => b.isbn);
@@ -118,13 +119,20 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
   };
 
   const renderShelfCard = (shelf: ShelfResult | null | undefined, index: number, trend: string, isLoading: boolean) => {
-    const isNew = trend === 'new'; const isOut = trend === 'out'; const isHighlight = isNew || isOut;
+    const isNew = trend === 'new';
+    const isOut = trend === 'out';
+    const isHighlight = isNew || isOut;
+
     if (isLoading) return <div className={clsx("flex items-center justify-center h-full gap-1", isHighlight ? "text-white/60" : "text-gray-400")}><Loader2 size={10} className="animate-spin" /><span className="text-[8px]">조회중</span></div>;
     const loc = shelf?.locations?.[index];
     if (!loc) return <span className={clsx("text-[8px]", isHighlight ? "text-white/40" : "text-gray-300")}>-</span>;
 
     return (
-      <div className={clsx("rounded-lg px-1.5 py-1 text-[8px] leading-tight border w-full smooth-transition shadow-sm", isNew ? "bg-[#c8d8eb] border-[#a3bcd8] text-[#1a3a5c]" : isOut ? "bg-[#fca5a5] border-[#f87171] text-[#450a0a]" : "bg-white/80 border-[#d5cfc6] text-[#4a3f35]")}>
+      <div className={clsx("rounded-lg px-1.5 py-1 text-[8px] leading-tight border w-full smooth-transition shadow-sm",
+        isNew ? "bg-[#c8d8eb] border-[#a3bcd8] text-[#1a3a5c]" : 
+        isOut ? "bg-[#fca5a5] border-[#f87171] text-[#450a0a]" : // 이전주(OUT) 서가 붉은색 테마
+        "bg-white/80 border-[#d5cfc6] text-[#4a3f35]"
+      )}>
         <div className="font-bold whitespace-normal break-words">{loc.location}</div>
         {loc.category && <div className={clsx("whitespace-normal break-words mt-px", isNew ? "text-[#3a6494]" : isOut ? "text-[#7f1d1d]" : "text-[#8a7e72]")}>{loc.category}</div>}
       </div>
@@ -136,7 +144,9 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
       <>
         <div className="w-full text-[10px] font-sans">
           <div className="bg-[#F2F2F2]/80 backdrop-blur-md border-t-2 border-b border-black/80 font-bold text-center">
-            <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', height: '20px' }}><div className="border-r border-gray-300/80">순위</div><div className="border-r border-gray-300/80">ISBN</div><div>도서명</div></div>
+            <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', height: '20px' }}>
+              <div className="border-r border-gray-300/80">순위</div><div className="border-r border-gray-300/80">ISBN</div><div>도서명</div>
+            </div>
           </div>
           {books.map((book) => {
             const isNew = book.trend === 'new'; const isOut = book.trend === 'out'; const isHighlight = isNew || isOut;
@@ -186,7 +196,9 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
       <>
         <div className="w-full text-[10px] font-sans">
           <div className="bg-[#F2F2F2]/80 backdrop-blur-md border-t-2 border-b border-black/80 font-bold text-center">
-            <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', height: '20px' }}><div className="border-r border-gray-300/80">순위</div><div className="border-r border-gray-300/80">ISBN</div><div>도서명</div></div>
+            <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', height: '20px' }}>
+              <div className="border-r border-gray-300/80">순위</div><div className="border-r border-gray-300/80">ISBN</div><div>도서명</div>
+            </div>
           </div>
           {books.map((book) => {
             const isNew = book.trend === 'new'; const isOut = book.trend === 'out'; const isHighlight = isNew || isOut;

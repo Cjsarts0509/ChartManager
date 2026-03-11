@@ -41,8 +41,12 @@ export const MobileView: React.FC<MobileViewProps> = ({
   useEffect(() => {
     if (!showStorePanel && !showPartPanel) return;
     const handler = (e: MouseEvent) => {
-      if (showStorePanel && storePanelRef.current && !storePanelRef.current.contains(e.target as Node)) { setShowStorePanel(false); setStoreSearch(""); }
-      if (showPartPanel && partPanelRef.current && !partPanelRef.current.contains(e.target as Node)) { setShowPartPanel(false); }
+      if (showStorePanel && storePanelRef.current && !storePanelRef.current.contains(e.target as Node)) {
+        setShowStorePanel(false); setStoreSearch("");
+      }
+      if (showPartPanel && partPanelRef.current && !partPanelRef.current.contains(e.target as Node)) {
+        setShowPartPanel(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -61,18 +65,24 @@ export const MobileView: React.FC<MobileViewProps> = ({
 
   const selectedPart = storeParts.find(p => p.id === selectedPartId) || null;
   useEffect(() => {
-    if (selectedPart && selectedPart.categories.length > 0) { setGroupCode(selectedPart.categories[0].code); setLimit(selectedPart.categories[0].rank); }
+    if (selectedPart && selectedPart.categories.length > 0) {
+      setGroupCode(selectedPart.categories[0].code); setLimit(selectedPart.categories[0].rank);
+    }
   }, [selectedPartId]);
 
   const hasData = thisWeekBooks.length > 0 || lastWeekBooks.length > 0;
   const filteredStores = useMemo(() => {
-    if (!storeSearch.trim()) return STORES; const q = storeSearch.trim().toLowerCase(); return STORES.filter(s => s.name.toLowerCase().includes(q) || s.code.includes(q));
+    if (!storeSearch.trim()) return STORES;
+    const q = storeSearch.trim().toLowerCase();
+    return STORES.filter(s => s.name.toLowerCase().includes(q) || s.code.includes(q));
   }, [storeSearch]);
 
   const availableCategories = useMemo(() => selectedPart ? selectedPart.categories.map(c => c.code) : CATEGORIES, [selectedPart]);
   const categoryRanks = useMemo(() => selectedPart ? Object.fromEntries(selectedPart.categories.map(c => [c.code, c.rank])) : undefined, [selectedPart]);
 
-  const handleGroupCodeChange = (code: string) => { setGroupCode(code); if (categoryRanks && categoryRanks[code]) setLimit(categoryRanks[code]); };
+  const handleGroupCodeChange = (code: string) => {
+    setGroupCode(code); if (categoryRanks && categoryRanks[code]) setLimit(categoryRanks[code]);
+  };
 
   const currentList = useMemo(() => getComparison(thisWeekBooks, lastWeekBooks, groupCode, limit), [thisWeekBooks, lastWeekBooks, groupCode, limit]);
   const pastList = useMemo(() => {
@@ -145,7 +155,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
           <button
             onClick={async () => {
               if (selectedStore && hasData) {
-                // 서가 조회 시 무조건 최신리스트 조회 완료 후, 이전주 리스트가 조회되도록 await 처리 보장
+                // 서가버튼 클릭 시 최신 리스트 조회 후 순차적으로 이전 리스트도 조회되게 합니다 (await 필수)
                 if (bookTableRef.current) await bookTableRef.current.fetchAllShelves();
                 if (prevTableRef.current) await prevTableRef.current.fetchAllShelves();
               }
@@ -179,7 +189,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
             <div className="w-16 h-16 glass-panel bg-gray-200/50 rounded-2xl flex items-center justify-center mb-4"><FileSpreadsheet size={28} className="text-gray-400" /></div><p className="text-gray-500 text-sm mb-1">클라우드에 업로드된 파일이 없습니다</p><button onClick={onRefreshCloud} className="mt-4 flex items-center gap-2 px-4 py-2 bg-emerald-600/90 text-white rounded-xl text-sm font-semibold smooth-transition active:scale-95 shadow-md"><RefreshCw size={14} /> 다시 시도</button>
           </div>
         ) : (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "tween", ease: "easeOut", duration: 0.3 }} className="space-y-4">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             <div className="glass-panel rounded-2xl overflow-hidden shadow-md bg-white/80">
               <div className="text-center border-b-2 border-black/80 py-2 bg-white/50">
                 <h3 className="text-sm font-bold text-gray-900">{title || '이번주 데이터 없음'}</h3>
