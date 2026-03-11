@@ -11,7 +11,6 @@ import { Store } from '../lib/constants';
 import { Toaster, toast } from 'sonner';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-// Custom hook for responsive breakpoint
 function useIsMobile(breakpoint = 768) {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < breakpoint);
   useEffect(() => {
@@ -29,7 +28,6 @@ export default function App() {
   const [printingId, setPrintingId] = useState<string | null>(null);
   const [printMode, setPrintMode] = useState<'normal' | 'a4' | null>(null);
 
-  // Upload confirm dialog state
   const [uploadConfirm, setUploadConfirm] = useState<{
     file: File;
     weekKey: string;
@@ -38,45 +36,35 @@ export default function App() {
     fileHash?: string;
   } | null>(null);
 
-  // Cloud state
   const [cloudInfo, setCloudInfo] = useState<CloudFilesResponse | null>(null);
   const [cloudLoading, setCloudLoading] = useState(false);
-
-  // Store state (PC: 전체 공유)
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
-
-  // Part Config state (영업점별 파트/조코드 설정)
   const [showCategoryConfig, setShowCategoryConfig] = useState(false);
   const [storeParts, setStoreParts] = useState<PartConfig[]>([]);
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
 
-  // Derived: 선택된 파트에서 카테고리 목록 + 순위 맵
   const selectedPart = storeParts.find(p => p.id === selectedPartId) || null;
   const activeCategories = selectedPart ? selectedPart.categories.map(c => c.code) : null;
   const categoryRanks = selectedPart
     ? Object.fromEntries(selectedPart.categories.map(c => [c.code, c.rank]))
     : undefined;
 
-  // Canvas State
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 50, y: 50 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  // 전역 에러 핸들러 설치 (1회)
   useEffect(() => {
     installGlobalErrorLogger();
   }, []);
 
-  // 영업점 변경 시 파트 설정 불러오기 + 리스트 초기화
   useEffect(() => {
     if (!selectedStore) {
       setStoreParts([]);
       setSelectedPartId(null);
       return;
     }
-    // 영업점 변경 시 리스트를 초기 상태로 리셋
     setLists([{ id: 'init-1' }]);
     setPosition({ x: 50, y: 50 });
 
@@ -94,7 +82,6 @@ export default function App() {
     return () => { cancelled = true; };
   }, [selectedStore]);
 
-  // 파트의 조코드별 ListCard 수동 불러오기
   const handleLoadPartLists = useCallback(() => {
     if (selectedPart && selectedPart.categories.length > 0) {
       const autoLists = selectedPart.categories.map((cat, idx) => ({
@@ -118,9 +105,6 @@ export default function App() {
 
   const isMobile = useIsMobile();
 
-  // ============================
-  // Cloud: Fetch & Download (자동 정렬)
-  // ============================
   const loadFromCloud = useCallback(async (silent = false) => {
     setCloudLoading(true);
     try {
@@ -129,7 +113,6 @@ export default function App() {
 
       let loaded = 0;
 
-      // thisWeek = 가장 최근 주차 (서버에서 weekKey desc 정렬)
       if (info.thisWeek?.exists && info.thisWeek.url) {
         try {
           const buffer = await downloadFileAsBuffer(info.thisWeek.url);
@@ -141,7 +124,6 @@ export default function App() {
         }
       }
 
-      // lastWeek = 두 번째 최근 주차
       if (info.lastWeek?.exists && info.lastWeek.url) {
         try {
           const buffer = await downloadFileAsBuffer(info.lastWeek.url);
@@ -161,8 +143,6 @@ export default function App() {
         }
       }
     } catch (e) {
-      // Edge Function 미배포 또는 네트워크 단절 시 조용히 처리
-      // (silent=true인 초기 로딩에서는 사용자에게 노출 안 됨)
       console.warn('Cloud fetch warning:', e instanceof Error ? e.message : e);
       writeErrorLog('cloud_fetch', e);
       if (!silent) toast.error('클라우드 연결 실패');
@@ -171,65 +151,45 @@ export default function App() {
     }
   }, []);
 
-  // Auto-load from cloud on mount
   useEffect(() => {
     loadFromCloud(true);
   }, [loadFromCloud]);
 
-  // Reset printMode after print dialog closes (cancel or print)
   useEffect(() => {
     const handler = () => setPrintMode(null);
     window.addEventListener('afterprint', handler);
     return () => window.removeEventListener('afterprint', handler);
   }, []);
 
-  // ============================
-  // File Upload Handler (단일 버튼)
-  // 1. 용량 검증 (3MB 제한)
-  // 2. 로컬 파싱 → weekKey 추출
-  // 3. 파일 해시 계산 (SHA-256, <1ms for 70KB)
-  // 4. 중복 체크 → 확인 다이얼로그
-  // 5. 클라우드 업로드 (weekKey 기반 저장)
-  // 6. 클라우드에서 최신 2개 다시 불러오기
-  // ============================
-  const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
+  const MAX_FILE_SIZE = 3 * 1024 * 1024;
 
   const handleFileUpload = async (file: File) => {
     try {
-      // 1. 용량 검증
       if (file.size > MAX_FILE_SIZE) {
         toast.error(`파일 용량 초과: ${(file.size / 1024 / 1024).toFixed(1)}MB\n최대 3MB까지 업로드 가능합니다`);
         return;
       }
 
-      // 2. 로컬 파싱
       const data = await parseExcel(file);
-
-      // 3. weekKey 추출
       const weekKey = extractWeekKey(data.title);
       if (!weekKey) {
         toast.error(`주차 정보를 찾을 수 없습니다: "${data.title}"\n파일 타이틀에 "YYYY년 NN주" 형식이 필요합니다`);
         return;
       }
 
-      // 4. 파일 해시 계산 (SHA-256, <1ms for 70KB)
       const fileHash = await computeFileHash(file);
-
       toast.success(`${data.title} (${weekKey}) 파싱 완료`);
 
-      // 5. 중복 체크: 클라우드에 같은 weekKey가 이미 있는지 확인
       const existingFile = [cloudInfo?.thisWeek, cloudInfo?.lastWeek].find(
         (f) => f?.exists && f.weekKey === weekKey
       );
 
       if (existingFile) {
-        // 5a. 해시 비교: 완전히 동일한 파일이면 업로드 스킵
         if (existingFile.fileHash && existingFile.fileHash === fileHash) {
           toast.info('동일한 파일이 이미 클라우드에 있습니다.\n업로드를 건너뜁니다.');
           return;
         }
 
-        // 5b. weekKey 같지만 내용 다름 → 덮어쓰기 확인
         setUploadConfirm({
           file,
           weekKey,
@@ -240,7 +200,6 @@ export default function App() {
         return;
       }
 
-      // 6. 중복 없으면 바로 업로드
       await doUpload(file, weekKey, data.title, fileHash);
 
     } catch (e) {
@@ -250,7 +209,6 @@ export default function App() {
     }
   };
 
-  // 실제 업로드 실행
   const doUpload = async (file: File, weekKey: string, title: string, fileHash?: string) => {
     try {
       await uploadToCloud(file, weekKey, title, fileHash);
@@ -260,11 +218,9 @@ export default function App() {
       writeErrorLog('cloud_upload', e);
       toast.error('클라우드 업로드 실패');
     }
-    // 클라우드에서 최신 2개 다시 불러와서 this/last 자동 배치
     await loadFromCloud(true);
   };
 
-  // 덮어쓰기 확인 핸들러
   const handleUploadConfirm = async () => {
     if (!uploadConfirm) return;
     const { file, weekKey, title, fileHash } = uploadConfirm;
@@ -277,7 +233,6 @@ export default function App() {
     toast.info('업로드 취소됨');
   };
 
-  // List Handlers
   const handleAddList = () => setLists(prev => [...prev, { id: `list-${Date.now()}` }]);
   const handleDeleteList = (id: string) => setLists(prev => prev.filter(l => l.id !== id));
   
@@ -294,7 +249,6 @@ export default function App() {
     setTimeout(() => { window.print(); setPrintingId(null); }, 100);
   };
 
-  // Canvas Interaction Handlers - use native event for preventDefault on passive wheel
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
@@ -315,7 +269,6 @@ export default function App() {
     return () => el.removeEventListener('wheel', handler);
   }, [isMobile]);
 
-  /** 드래그 시작 — 인터랙티브 요소(링크, 버튼 등) 위에서는 무시 */
   const handleMouseDown = (e: React.MouseEvent) => {
     const tag = (e.target as HTMLElement).closest('a, button, input, select, textarea, [role="button"], [data-no-drag]');
     if (tag) return;
@@ -354,11 +307,11 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-    <div className="h-screen w-screen bg-[#e5e5e5] overflow-hidden flex flex-col font-sans main-desktop-wrapper">
+    {/* 2026 트렌드: 클린 뉴모피즘 그라데이션 바탕색 적용 */}
+    <div className="h-screen w-screen bg-gradient-to-br from-slate-50 via-slate-100 to-gray-200 overflow-hidden flex flex-col font-sans main-desktop-wrapper text-slate-800">
       <Toaster position="top-center" />
       
-      {/* Fixed Top Bar */}
-      <div className="z-50 relative shadow-md topbar-wrapper">
+      <div className="z-50 relative shadow-sm border-b border-white/50 topbar-wrapper">
         <TopBar 
           titleThisWeek={thisWeekData.title}
           titleLastWeek={lastWeekData.title}
@@ -380,35 +333,40 @@ export default function App() {
         />
       </div>
 
-      {/* Canvas Area */}
+      {/* 2026 트렌드: 은은한 캔버스 도트 패턴으로 공간감 부여 */}
       <div 
         className="flex-1 relative cursor-grab active:cursor-grabbing overflow-hidden canvas-area"
+        style={{
+          backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(15, 23, 42, 0.04) 1px, transparent 0)',
+          backgroundSize: '32px 32px'
+        }}
         ref={canvasRef}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        <div className="absolute top-4 left-4 z-40 bg-black/70 text-white px-3 py-1 rounded-full text-xs pointer-events-none canvas-hint">
-          휠: 상하 이동 | Ctrl + 휠: 확대/축소 | 드래그: 자유 이동
+        {/* 2026 트렌드: 반투명 글래스모피즘(Glassmorphism) 힌트 박스 */}
+        <div className="absolute top-5 left-5 z-40 bg-white/60 backdrop-blur-md border border-white/40 shadow-sm text-slate-700 px-4 py-2 rounded-2xl text-xs font-medium pointer-events-none canvas-hint transition-all duration-300">
+          ✨ 휠: 상하 이동 | Ctrl + 휠: 확대/축소 | 드래그: 자유 이동
         </div>
 
-        {/* Scalable Content Container */}
         <div 
           style={{ 
             transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
             transformOrigin: '0 0',
             display: 'flex',
-            gap: '40px',
+            gap: '48px',
             alignItems: 'flex-start',
             position: 'absolute'
           }}
           className={`canvas-content ${printingId ? "print:transform-none print:static" : ""}`}
         >
           {lists.map(list => (
+            // 2026 트렌드: 호버 입체감(Hover-based Reveal)과 마이크로 인터랙션
             <div 
               key={list.id} 
-              className={`list-wrapper ${printingId && printingId !== list.id ? "print:hidden" : "print:block"}`}
+              className={`list-wrapper transition-all duration-500 ease-out hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] rounded-[2rem] bg-white/40 backdrop-blur-sm border border-white/60 p-2 ${printingId && printingId !== list.id ? "print:hidden" : "print:block"}`}
             >
               <ListCard 
                 id={list.id}
@@ -430,8 +388,8 @@ export default function App() {
         </div>
       </div>
 
-      {/* Print Styles */}
       <style>{`
+        /* 인쇄 스타일은 기능이므로 손대지 않음 */
         @media print {
           @page { margin: 5mm; }
           body, html {
@@ -445,17 +403,19 @@ export default function App() {
             height: auto !important;
             overflow: visible !important;
             display: block !important;
+            background: white !important;
           }
           .topbar-wrapper { display: none !important; }
           .canvas-area {
             overflow: visible !important;
             height: auto !important;
             position: static !important;
+            background: none !important;
           }
           .canvas-hint { display: none !important; }
+          .list-wrapper { background: none !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
 
           ${printMode === 'a4' ? `
-            /* ===== A4 모드: 리스트 2개를 A4 1장에 나란히 ===== */
             @page { size: A4 portrait; margin: 5mm; }
             .canvas-content {
               transform: none !important;
@@ -493,7 +453,6 @@ export default function App() {
               border: none !important;
             }
           ` : `
-            /* ===== 일반 모드: 리스트 1개당 1페이지 ===== */
             .canvas-content {
               transform: none !important;
               position: static !important;
@@ -521,7 +480,6 @@ export default function App() {
         }
       `}</style>
 
-      {/* Upload Confirm Dialog */}
       {uploadConfirm && (
         <UploadConfirmDialog
           weekKey={uploadConfirm.weekKey}
@@ -533,18 +491,15 @@ export default function App() {
         />
       )}
 
-      {/* Category Config Dialog */}
       {showCategoryConfig && (
         <CategoryConfigDialog
           open={showCategoryConfig}
           onClose={() => setShowCategoryConfig(false)}
           initialStore={selectedStore}
           onSaved={(storeCode, parts) => {
-            // 현재 선택된 영업점과 같으면 바로 반영
             if (selectedStore && selectedStore.code === storeCode) {
               setStoreParts(parts);
               if (parts.length > 0) {
-                // 기존 선택 파트가 있으면 유지, 없으면 첫 번째
                 const stillExists = parts.find(p => p.id === selectedPartId);
                 if (!stillExists) setSelectedPartId(parts[0].id);
               } else {
