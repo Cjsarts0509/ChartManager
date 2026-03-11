@@ -20,15 +20,3 @@
 .animate-ripple {
   animation: ripple 0.6s linear;
 }
-
-/* 마우스 커서 경계선 기반 광원 펄스 효과 */
-@keyframes cursorShapeGlow {
-  0%, 100% { filter: drop-shadow(0 0 4px rgba(156, 163, 175, 0.4)); }
-  50% { filter: drop-shadow(0 0 12px rgba(156, 163, 175, 0.9)); }
-}
-
-/* 클릭 시 파티클 효과 */
-@keyframes particleBurst {
-  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-  100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
-}

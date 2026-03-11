@@ -22,86 +22,6 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
-const CustomCursor = () => {
-  const mainCursor = useRef<HTMLDivElement>(null);
-  const [isHovering, setIsHovering] = useState(false);
-  const [isClicking, setIsClicking] = useState(false);
-  const [particles, setParticles] = useState<{ id: number; x: number; y: number }[]>([]);
-  const mousePos = useRef({ x: -100, y: -100 });
-  const requestRef = useRef<number>();
-
-  useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => { mousePos.current = { x: e.clientX, y: e.clientY }; };
-    const onMouseDown = () => {
-      setIsClicking(true);
-      const newParticles = Array.from({ length: 6 }).map((_, i) => ({
-        id: Date.now() + i,
-        x: mousePos.current.x,
-        y: mousePos.current.y
-      }));
-      setParticles(newParticles);
-      setTimeout(() => setParticles([]), 600);
-    };
-    const onMouseUp = () => setIsClicking(false);
-
-    const updateHoverState = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('a, button, input, select, textarea, [role="button"], .cursor-pointer')) {
-        setIsHovering(true);
-      } else {
-        setIsHovering(false);
-      }
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mouseup', onMouseUp);
-    window.addEventListener('mouseover', updateHoverState);
-
-    const loop = () => {
-      if (mainCursor.current) {
-        mainCursor.current.style.transform = `translate3d(${mousePos.current.x}px, ${mousePos.current.y}px, 0) scale(${isClicking ? 0.8 : isHovering ? 1.2 : 1})`;
-      }
-      requestRef.current = requestAnimationFrame(loop);
-    };
-    requestRef.current = requestAnimationFrame(loop);
-
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mouseup', onMouseUp);
-      window.removeEventListener('mouseover', updateHoverState);
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    };
-  }, [isClicking, isHovering]);
-
-  return (
-    <>
-      <style>{`body { cursor: none !important; } @media print { body { cursor: auto !important; } .custom-cursor-layer { display: none !important; } }`}</style>
-      <div className="custom-cursor-layer fixed inset-0 pointer-events-none z-[99999] overflow-hidden">
-        <div ref={mainCursor} className="absolute top-0 left-0 transition-transform duration-100 ease-out origin-top-left" style={{ willChange: 'transform' }}>
-          <svg viewBox="0 0 24 32" width="22" height="28" style={{ animation: 'cursorShapeGlow 2s infinite ease-in-out' }}>
-            <path d="M 1 1 L 1 25 L 7.5 19 L 12.5 28 L 16 26 L 11 17 L 19 17 Z" fill="#374151" stroke="#ffffff" strokeWidth="1.5" />
-          </svg>
-        </div>
-        {particles.map((p, i) => {
-          const angle = (i / 6) * Math.PI * 2;
-          const dist = 35;
-          return (
-            <div key={p.id} className="absolute w-1.5 h-1.5 bg-gray-400 rounded-full"
-                 style={{
-                   left: p.x, top: p.y,
-                   '--tx': `${Math.cos(angle) * dist}px`, '--ty': `${Math.sin(angle) * dist}px`,
-                   animation: 'particleBurst 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards'
-                 } as React.CSSProperties}
-            />
-          );
-        })}
-      </div>
-    </>
-  );
-};
-
 export default function App() {
   const [thisWeekData, setThisWeekData] = useState<ProcessedData>({ title: "", books: [] });
   const [lastWeekData, setLastWeekData] = useState<ProcessedData>({ title: "", books: [] });
@@ -228,15 +148,14 @@ export default function App() {
   return (
     <ErrorBoundary>
     <div className="h-screen w-screen bg-gradient-to-br from-indigo-50/50 via-purple-50/50 to-blue-50/50 overflow-hidden flex flex-col font-sans main-desktop-wrapper text-slate-800 relative">
-      {!isMobile && <CustomCursor />}
       <Toaster position="top-center" />
       
       <div className="z-50 relative topbar-wrapper">
         <TopBar titleThisWeek={thisWeekData.title} titleLastWeek={lastWeekData.title} onUploadFile={handleFileUpload} onAddList={handleAddList} onPrint={handleGlobalPrint} onPrintA4={handleGlobalPrintA4} cloudInfo={cloudInfo} cloudLoading={cloudLoading} onRefreshCloud={() => loadFromCloud(false)} selectedStore={selectedStore} onSelectStore={setSelectedStore} onOpenCategoryConfig={() => setShowCategoryConfig(true)} storeParts={storeParts} selectedPartId={selectedPartId} onSelectPart={setSelectedPartId} onLoadPartLists={handleLoadPartLists} onClearLists={handleClearLists} />
       </div>
 
-      <div className="flex-1 relative overflow-hidden canvas-area" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(15, 23, 42, 0.05) 1px, transparent 0)', backgroundSize: '32px 32px' }} ref={canvasRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-        <div className="absolute top-5 left-5 z-40 glass-panel shadow-sm text-slate-700 px-4 py-2 rounded-2xl text-xs font-medium pointer-events-none canvas-hint transition-all duration-300">
+      <div className="flex-1 relative overflow-hidden canvas-area cursor-grab active:cursor-grabbing" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(15, 23, 42, 0.05) 1px, transparent 0)', backgroundSize: '32px 32px' }} ref={canvasRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+        <div className="absolute top-5 left-5 z-40 glass-panel shadow-sm text-slate-700 px-4 py-2 rounded-2xl text-xs font-bold pointer-events-none canvas-hint transition-all duration-300">
           ✨ 휠: 상하 이동 | Ctrl + 휠: 확대/축소 | 드래그: 자유 이동
         </div>
 
