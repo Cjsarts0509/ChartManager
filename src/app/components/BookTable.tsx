@@ -122,18 +122,18 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
     const isOut = trend === 'out';
     const isHighlight = isNew || isOut;
 
-    if (isLoading) return <div className={clsx("flex items-center justify-center h-full gap-1", isHighlight ? "text-white/70" : "text-slate-400")}><Loader2 size={10} className="animate-spin" /><span className="text-[8px]">조회중</span></div>;
+    if (isLoading) return <div className={clsx("flex items-center justify-center h-full gap-1", isHighlight ? "text-white/60" : "text-gray-400")}><Loader2 size={10} className="animate-spin" /><span className="text-[8px]">조회중</span></div>;
     const loc = shelf?.locations?.[index];
-    if (!loc) return <span className={clsx("text-[8px]", isHighlight ? "text-white/40" : "text-slate-300")}>-</span>;
+    if (!loc) return <span className={clsx("text-[8px]", isHighlight ? "text-white/40" : "text-gray-300")}>-</span>;
 
     return (
       <div className={clsx("rounded-lg px-1.5 py-1 text-[8px] leading-tight border w-full smooth-transition shadow-sm",
-        isNew ? "bg-blue-700 border-blue-400 text-white" : 
-        isOut ? "bg-rose-700 border-rose-400 text-white" : 
-        "bg-white/80 border-slate-200 text-slate-700"
+        isNew ? "bg-[#c8d8eb] border-[#a3bcd8] text-[#1a3a5c]" : 
+        isOut ? "bg-[#fca5a5] border-[#f87171] text-[#450a0a]" : 
+        "bg-white/80 border-[#d5cfc6] text-[#4a3f35]"
       )}>
         <div className="font-bold whitespace-normal break-words">{loc.location}</div>
-        {loc.category && <div className={clsx("whitespace-normal break-words mt-px", isHighlight ? "text-white/80" : "text-slate-500")}>{loc.category}</div>}
+        {loc.category && <div className={clsx("whitespace-normal break-words mt-px", isNew ? "text-[#3a6494]" : isOut ? "text-[#7f1d1d]" : "text-[#8a7e72]")}>{loc.category}</div>}
       </div>
     );
   };
@@ -142,9 +142,9 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
     return (
       <>
         <div className="w-full text-[10px] font-sans">
-          <div className="bg-slate-100/50 backdrop-blur-md border-t-2 border-b border-slate-300 font-bold text-center text-slate-700">
+          <div className="bg-[#F2F2F2]/80 backdrop-blur-md border-t-2 border-b border-black/80 font-bold text-center">
             <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', height: '20px' }}>
-              <div className="border-r border-slate-200/80">순위</div><div className="border-r border-slate-200/80">ISBN</div><div>도서명</div>
+              <div className="border-r border-gray-300/80">순위</div><div className="border-r border-gray-300/80">ISBN</div><div>도서명</div>
             </div>
           </div>
           {books.map((book) => {
@@ -153,29 +153,29 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
 
             return (
               <div key={`${book.isbn}-${book.trend}`}>
-                <div className={clsx("border-b smooth-transition", isExpanded && !isHighlight ? "border-amber-200/80" : "border-slate-200/60", isNew && "bg-blue-600/95 backdrop-blur-sm border-l-4 border-blue-700 text-white", isOut && "bg-rose-600/95 backdrop-blur-sm border-l-4 border-rose-700 text-white", !isHighlight && "text-slate-700 bg-white/40 hover:bg-white/70 border-l-4 border-transparent")}>
+                <div className={clsx("border-b smooth-transition", isExpanded && !isHighlight ? "border-amber-300/50" : "border-[#E1E1E1]/50", isNew && "bg-blue-700 text-white", isOut && "bg-red-700 text-white", !isHighlight && "text-black bg-white/40 hover:bg-white/60")}>
                   <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', minHeight: '24px' }}>
-                    <div className={clsx("flex flex-col items-center justify-center border-r py-0.5", isHighlight ? "border-white/20" : "border-slate-200/60")}>
-                      <span className={clsx("font-bold", isHighlight ? "text-white" : "text-slate-800")}>{book.rank > 0 ? book.rank : ''}</span>
-                      {book.trend === 'same' && <Minus size={8} className="text-slate-400" />}
-                      {book.trend === 'up' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white" : "text-red-500")}>▲{book.trendValue}</span>}
-                      {book.trend === 'down' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white" : "text-blue-500")}>▼{book.trendValue}</span>}
+                    <div className={clsx("flex flex-col items-center justify-center border-r py-0.5", isHighlight ? "border-white/20" : "border-gray-200")}>
+                      <span className="font-bold">{book.rank > 0 ? book.rank : ''}</span>
+                      {book.trend === 'same' && <Minus size={8} className={isHighlight ? "text-white/60" : "text-gray-300"} />}
+                      {book.trend === 'up' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white/90" : "text-red-500")}>▲{book.trendValue}</span>}
+                      {book.trend === 'down' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white/90" : "text-blue-500")}>▼{book.trendValue}</span>}
                       {book.trend === 'new' && <span className="text-[8px] leading-none text-white font-bold">NEW</span>}
                       {book.trend === 'out' && <span className="text-[8px] leading-none text-white font-bold">OUT</span>}
                     </div>
-                    <div className={clsx("text-center border-r cursor-pointer active:scale-95 text-[9px] tracking-tighter py-0.5 smooth-transition underline", isHighlight ? "border-white/20 text-white/90 decoration-white/50 hover:text-white" : "border-slate-200/60 text-slate-500 hover:text-blue-600 decoration-slate-300")} onClick={(e) => handleIsbnClick(book, e)}>{book.isbn}</div>
-                    <div className={clsx("flex items-center px-1.5 py-0.5 cursor-pointer active:scale-95 min-w-0 smooth-transition", isExpanded && !isHighlight ? "text-amber-700 font-bold" : isHighlight ? "" : "hover:text-emerald-700", isThisLoading && "animate-pulse")} onClick={() => handleTitleClick(book)}>
+                    <div className={clsx("text-center border-r cursor-pointer active:scale-95 text-[9px] tracking-tighter py-0.5 smooth-transition", isHighlight ? "border-white/20 text-white underline decoration-white/50" : "border-gray-200 text-[#555] underline decoration-gray-300 hover:text-blue-600")} onClick={(e) => handleIsbnClick(book, e)}>{book.isbn}</div>
+                    <div className={clsx("flex items-center px-1.5 py-0.5 cursor-pointer active:scale-95 min-w-0 smooth-transition", isExpanded && !isHighlight && "text-amber-700 font-bold", isThisLoading && "animate-pulse")} onClick={() => handleTitleClick(book)}>
                       <span className="truncate font-semibold text-left flex-1 min-w-0">{book.title}</span>
-                      {isThisLoading && <Loader2 size={8} className={clsx("shrink-0 ml-1 animate-spin", isHighlight ? "text-white" : "text-slate-400")} />}
-                      {!isThisLoading && bookShelf?.stock && <span className={clsx("shrink-0 ml-1 text-[7px] px-1 py-px rounded-md font-bold whitespace-nowrap shadow-sm border", isNew ? "bg-blue-700 text-white border-blue-400" : isOut ? "bg-rose-700 text-white border-rose-400" : "bg-white/90 text-slate-600 border-slate-200")}>{bookShelf.stock}부</span>}
+                      {isThisLoading && <Loader2 size={8} className="shrink-0 ml-1 animate-spin" />}
+                      {!isThisLoading && bookShelf?.stock && <span className={clsx("shrink-0 ml-1 text-[7px] px-1 py-px rounded-md font-bold whitespace-nowrap shadow-sm", isNew ? "bg-[#0000CD]/25 text-[#FFF79B] border border-[#FFF79B]/30" : isOut ? "bg-red-900/30 text-[#fca5a5] border border-red-300/30" : "bg-white/80 text-[#7a6e5f] border border-[#d5cfc6]")}>{bookShelf.stock}부</span>}
                     </div>
                   </div>
                 </div>
                 {isExpanded && (() => {
                   const shelfLoaded = !isThisLoading && bookShelf !== undefined;
                   return (
-                  <div className={clsx("grid border-b-2 overflow-hidden smooth-transition", shelfLoaded ? isNew ? "border-blue-400 bg-blue-500/90 backdrop-blur-sm" : isOut ? "border-rose-400 bg-rose-500/90 backdrop-blur-sm" : "border-slate-300/50 bg-slate-100/60 backdrop-blur-sm" : isHighlight ? "border-white/20 bg-black/10" : "border-slate-200/50 bg-white/40")} style={{ gridTemplateColumns: '1fr 1fr', minHeight: '28px' }}>
-                    <div className={clsx("px-1 py-1 flex items-start border-r", isHighlight ? "border-white/20" : "border-slate-200/60")}>{renderShelfCard(bookShelf, 0, book.trend, isThisLoading)}</div>
+                  <div className={clsx("grid border-b-2 overflow-hidden smooth-transition", shelfLoaded ? isNew ? "border-[#7eaad4] bg-[#3b6fa0]/90 backdrop-blur-sm" : isOut ? "border-[#f87171] bg-[#991b1b]/90 backdrop-blur-sm" : "border-[#d5cfc6] bg-[#f5f0e8]/80 backdrop-blur-sm" : "border-gray-200 bg-white/50")} style={{ gridTemplateColumns: '1fr 1fr', minHeight: '28px' }}>
+                    <div className={clsx("px-1 py-1 flex items-start border-r", shelfLoaded ? isHighlight ? "border-white/20" : "border-[#d5cfc6]" : "border-gray-200")}>{renderShelfCard(bookShelf, 0, book.trend, isThisLoading)}</div>
                     <div className="px-1 py-1 flex items-start">{renderShelfCard(bookShelf, 1, book.trend, isThisLoading)}</div>
                   </div>
                   );
@@ -194,25 +194,25 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
     return (
       <>
         <div className="w-full text-[10px] font-sans">
-          <div className="bg-slate-100/50 backdrop-blur-md border-t-2 border-b border-slate-300 font-bold text-center text-slate-700">
+          <div className="bg-[#F2F2F2]/80 backdrop-blur-md border-t-2 border-b border-black/80 font-bold text-center">
             <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', height: '20px' }}>
-              <div className="border-r border-slate-200/80">순위</div><div className="border-r border-slate-200/80">ISBN</div><div>도서명</div>
+              <div className="border-r border-gray-300/80">순위</div><div className="border-r border-gray-300/80">ISBN</div><div>도서명</div>
             </div>
           </div>
           {books.map((book) => {
             const isNew = book.trend === 'new'; const isOut = book.trend === 'out'; const isHighlight = isNew || isOut;
             return (
-              <div key={`${book.isbn}-${book.trend}`} className={clsx("border-b smooth-transition", isNew && "bg-blue-600/95 backdrop-blur-sm border-l-4 border-blue-700 text-white", isOut && "bg-rose-600/95 backdrop-blur-sm border-l-4 border-rose-700 text-white", !isHighlight && "text-slate-700 bg-white/40 hover:bg-white/70 border-slate-200/60 border-l-4 border-transparent")}>
+              <div key={`${book.isbn}-${book.trend}`} className={clsx("border-b border-[#E1E1E1]/50 smooth-transition", isNew && "bg-blue-700 text-white", isOut && "bg-red-700 text-white", !isHighlight && "text-black bg-white/40 hover:bg-white/60")}>
                 <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', minHeight: '24px' }}>
-                  <div className={clsx("flex flex-col items-center justify-center border-r py-0.5", isHighlight ? "border-white/20" : "border-slate-200/60")}>
-                    <span className={clsx("font-bold", isHighlight ? "text-white" : "text-slate-800")}>{book.rank > 0 ? book.rank : ''}</span>
-                    {book.trend === 'same' && <Minus size={8} className={isHighlight ? "text-white/60" : "text-slate-400"} />}
-                    {book.trend === 'up' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white" : "text-red-500")}>▲{book.trendValue}</span>}
-                    {book.trend === 'down' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white" : "text-blue-500")}>▼{book.trendValue}</span>}
+                  <div className={clsx("flex flex-col items-center justify-center border-r py-0.5", isHighlight ? "border-white/20" : "border-gray-200")}>
+                    <span className="font-bold">{book.rank > 0 ? book.rank : ''}</span>
+                    {book.trend === 'same' && <Minus size={8} className={isHighlight ? "text-white/60" : "text-gray-300"} />}
+                    {book.trend === 'up' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white/90" : "text-red-500")}>▲{book.trendValue}</span>}
+                    {book.trend === 'down' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white/90" : "text-blue-500")}>▼{book.trendValue}</span>}
                     {book.trend === 'new' && <span className="text-[8px] leading-none text-white font-bold">NEW</span>}
                     {book.trend === 'out' && <span className="text-[8px] leading-none text-white font-bold">OUT</span>}
                   </div>
-                  <div className={clsx("text-center border-r cursor-pointer active:scale-95 text-[9px] tracking-tighter py-0.5 smooth-transition underline", isHighlight ? "border-white/20 text-white/90 decoration-white/50 hover:text-white" : "border-slate-200/60 text-slate-500 hover:text-blue-600 decoration-slate-300")} onClick={() => setSelectedBookForCover(book)}>{book.isbn}</div>
+                  <div className={clsx("text-center border-r cursor-pointer active:scale-95 text-[9px] tracking-tighter py-0.5 smooth-transition", isHighlight ? "border-white/20 text-white underline decoration-white/50" : "border-gray-200 text-[#555] underline decoration-gray-300 hover:text-blue-600")} onClick={() => setSelectedBookForCover(book)}>{book.isbn}</div>
                   <div className="px-1.5 py-0.5 truncate font-semibold text-left">{book.title}</div>
                 </div>
               </div>
@@ -227,20 +227,20 @@ export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, stor
   return (
     <>
       <div className="w-full text-[10px] font-sans">
-        <div className="grid bg-slate-100/50 backdrop-blur-md border-t-2 border-b border-slate-300 font-bold text-center items-center text-slate-700" style={{ gridTemplateColumns: desktopGridTemplate, height: '25px' }}>
+        <div className="grid bg-[#F2F2F2]/80 backdrop-blur-md border-t-2 border-b border-black/80 font-bold text-center items-center" style={{ gridTemplateColumns: desktopGridTemplate, height: '25px' }}>
           <div>순위</div><div>ISBN</div><div>도서명</div><div>변동</div>
         </div>
         {books.map((book) => {
           const isNew = book.trend === 'new'; const isOut = book.trend === 'out'; const isHighlight = isNew || isOut;
           return (
-            <div key={`${book.isbn}-${book.trend}`} className={clsx("grid border-b border-slate-200/60 items-center smooth-transition", isNew ? "bg-blue-600/90 backdrop-blur-sm border-l-4 border-l-blue-700 text-white" : isOut ? "bg-rose-600/90 backdrop-blur-sm border-l-4 border-l-rose-700 text-white" : "text-slate-700 bg-white/40 hover:bg-white/70 border-l-4 border-transparent")} style={{ gridTemplateColumns: desktopGridTemplate, height: '25px' }}>
-              <div className={clsx("text-center font-bold", isHighlight ? "text-white" : "text-slate-800")}>{book.rank > 0 ? book.rank : ''}</div>
-              <div className={clsx("text-center tracking-tighter cursor-pointer transition-all active:scale-95 underline", isHighlight ? "text-white/90 decoration-white/50 hover:text-white" : "text-slate-500 hover:text-blue-600 decoration-slate-300 hover:decoration-blue-300")} onClick={(e) => handleIsbnClick(book, e)}>{book.isbn}</div>
+            <div key={`${book.isbn}-${book.trend}`} className={clsx("grid border-b border-[#E1E1E1]/50 items-center smooth-transition", isNew ? "bg-blue-700 text-white" : isOut ? "bg-red-700 text-white" : "text-black bg-white/40 hover:bg-white/60")} style={{ gridTemplateColumns: desktopGridTemplate, height: '25px' }}>
+              <div className="text-center font-bold">{book.rank > 0 ? book.rank : ''}</div>
+              <div className={clsx("text-center tracking-tighter cursor-pointer transition-all active:scale-95", isHighlight ? "text-white underline decoration-white/50" : "text-[#555] underline decoration-gray-300 hover:text-blue-600 hover:decoration-blue-400")} onClick={(e) => handleIsbnClick(book, e)}>{book.isbn}</div>
               <div className={clsx("px-2 leading-tight truncate font-semibold text-left smooth-transition", storeCode ? "cursor-pointer active:scale-95" : "", storeCode && !isHighlight ? "hover:text-emerald-700" : "")} onClick={() => handleTitleClick(book)}>{book.title}</div>
               <div className="flex justify-center items-center h-full font-bold">
-                {book.trend === 'same' && <Minus size={10} className={isHighlight ? "text-white/60" : "text-slate-400"} />}
-                {book.trend === 'up' && <div className={clsx("flex items-center", isHighlight ? "text-white" : "text-red-500")}><span className="text-[8px] mr-0.5">▲</span><span>{book.trendValue}</span></div>}
-                {book.trend === 'down' && <div className={clsx("flex items-center", isHighlight ? "text-white" : "text-blue-500")}><span className="text-[8px] mr-0.5">▼</span><span>{book.trendValue}</span></div>}
+                {book.trend === 'same' && <Minus size={10} className={isHighlight ? "text-white/80" : "text-gray-400"} />}
+                {book.trend === 'up' && <div className={clsx("flex items-center", isHighlight ? "text-white/90" : "text-red-600")}><span className="text-[8px] mr-0.5">▲</span><span>{book.trendValue}</span></div>}
+                {book.trend === 'down' && <div className={clsx("flex items-center", isHighlight ? "text-white/90" : "text-blue-600")}><span className="text-[8px] mr-0.5">▼</span><span>{book.trendValue}</span></div>}
                 {book.trend === 'new' && <span className="text-white text-[9px] font-bold">NEW</span>}
                 {book.trend === 'out' && <span className="text-white text-[9px] font-bold">OUT</span>}
               </div>
