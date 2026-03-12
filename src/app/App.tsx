@@ -166,7 +166,7 @@ export default function App() {
   if (isMobile) {
     return (
       <ErrorBoundary>
-        <Toaster position="top-center" theme="dark" />
+        <Toaster position="top-center" theme="light" />
         <MobileView
           thisWeekBooks={thisWeekData.books}
           lastWeekBooks={lastWeekData.books}
@@ -182,9 +182,17 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-    <div className="h-screen w-screen bg-[#050505] overflow-hidden flex flex-col font-sans main-desktop-wrapper text-slate-200 relative">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.05)_0%,transparent_100%)] pointer-events-none" />
-      <Toaster position="top-center" theme="dark" />
+    {/* 밝은 화이트/슬레이트 기반의 배경과 은은한 유리 질감의 빛(Ambient Lights) */}
+    <div className="h-screen w-screen bg-[#f8fafc] overflow-hidden flex flex-col font-sans main-desktop-wrapper text-slate-800 relative selection:bg-blue-200">
+      
+      {/* 감성적인 라이트 이펙트 (배경 글래스모피즘) */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-blue-400/10 blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-purple-400/10 blur-[120px]" />
+        <div className="absolute top-[20%] right-[10%] w-[30vw] h-[30vw] rounded-full bg-emerald-400/10 blur-[100px]" />
+      </div>
+
+      <Toaster position="top-center" theme="light" />
       
       <div className="z-50 relative topbar-wrapper">
         <TopBar 
@@ -209,12 +217,12 @@ export default function App() {
       </div>
 
       <div 
-        className="flex-1 relative overflow-hidden canvas-area"
-        style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.05) 1px, transparent 0)', backgroundSize: '32px 32px' }}
+        className="flex-1 relative overflow-hidden canvas-area z-10"
+        style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(0, 0, 0, 0.03) 1px, transparent 0)', backgroundSize: '32px 32px' }}
         ref={canvasRef}
         onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}
       >
-        <div className="absolute top-5 left-5 z-40 bg-black/60 border border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.2)] text-sky-400 font-bold backdrop-blur-md px-4 py-2 rounded-2xl text-xs pointer-events-none canvas-hint transition-all duration-300">
+        <div className="absolute top-5 left-5 z-40 bg-white/60 border border-white shadow-[0_8px_32px_rgba(0,0,0,0.05)] text-slate-500 font-bold backdrop-blur-xl px-4 py-2 rounded-2xl text-xs pointer-events-none canvas-hint transition-all duration-300">
           ✨ 휠: 상하 이동 | Ctrl + 휠: 확대/축소 | 드래그: 자유 이동
         </div>
 
@@ -234,7 +242,7 @@ export default function App() {
             <motion.div 
               layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
               key={list.id} 
-              className={`list-wrapper smooth-transition hover:-translate-y-2 hover:shadow-[0_0_30px_rgba(56,189,248,0.15)] rounded-[2rem] p-2 ${printingId && printingId !== list.id ? "print:hidden" : "print:block"}`}
+              className={`list-wrapper smooth-transition hover:-translate-y-2 hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)] rounded-[2rem] p-2 ${printingId && printingId !== list.id ? "print:hidden" : "print:block"}`}
             >
               <ListCard 
                 id={list.id} thisWeekBooks={thisWeekData.books} lastWeekBooks={lastWeekData.books} title={thisWeekData.title} lastWeekTitle={lastWeekData.title}
@@ -248,9 +256,10 @@ export default function App() {
 
       <style>{`
         @media screen {
-          .list-card-print { background: rgba(11, 15, 25, 0.85) !important; color: #e2e8f0 !important; backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); border-radius: 1.5rem; padding: 1rem !important; }
-          .list-card-print h2, .list-card-print h3 { color: #f8fafc !important; }
-          .list-card-print select, .list-card-print input { background: rgba(0,0,0,0.5) !important; color: #fff !important; border: 1px solid rgba(255,255,255,0.1) !important; }
+          /* 글래스모피즘 기반의 리스트 카드 스타일 오버라이드 */
+          .list-card-print { background: rgba(255, 255, 255, 0.7) !important; color: #1e293b !important; backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.8); border-radius: 1.5rem; padding: 1rem !important; box-shadow: 0 10px 40px rgba(0,0,0,0.04) !important; }
+          .list-card-print h2, .list-card-print h3 { color: #0f172a !important; }
+          .list-card-print select, .list-card-print input { background: rgba(255,255,255,0.6) !important; color: #1e293b !important; border: 1px solid rgba(255,255,255,0.5) !important; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02) !important; }
         }
         @media print {
           @page { margin: 5mm; }
@@ -259,8 +268,8 @@ export default function App() {
           .topbar-wrapper, .canvas-hint { display: none !important; }
           .canvas-area { overflow: visible !important; height: auto !important; position: static !important; background: none !important; }
           .list-wrapper { background: none !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
-          .list-card-print { background: white !important; color: black !important; border: none !important; backdrop-filter: none !important; }
-          .list-card-print h2, .list-card-print h3, .list-card-print select, .list-card-print input { color: black !important; background: white !important; border: 1px solid #ccc !important; }
+          .list-card-print { background: white !important; color: black !important; border: none !important; backdrop-filter: none !important; box-shadow: none !important; }
+          .list-card-print h2, .list-card-print h3, .list-card-print select, .list-card-print input { color: black !important; background: white !important; border: 1px solid #ccc !important; box-shadow: none !important; }
           ${printMode === 'a4' ? `
             @page { size: A4 portrait; margin: 5mm; }
             .canvas-content { transform: none !important; position: static !important; display: flex !important; flex-wrap: wrap !important; gap: 0 !important; width: 100% !important; }
