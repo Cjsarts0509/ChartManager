@@ -1,292 +1,257 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { TopBar } from './components/TopBar';
-import { ListCard } from './components/ListCard';
-import { MobileView } from './components/MobileView';
-import { UploadConfirmDialog } from './components/UploadConfirmDialog';
-import { CategoryConfigDialog } from './components/CategoryConfigDialog';
-import { ProcessedData } from '../lib/types';
-import { parseExcel, parseExcelFromBuffer, extractWeekKey } from '../lib/excel';
-import { fetchCloudFiles, uploadToCloud, downloadFileAsBuffer, computeFileHash, CloudFilesResponse, fetchStorePartConfig, PartConfig, getDefaultParts, installGlobalErrorLogger, writeErrorLog } from '../lib/cloud';
-import { Store } from '../lib/constants';
-import { Toaster, toast } from 'sonner';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
+import { createPortal } from 'react-dom';
+import { BookWithTrend } from '../lib/types';
+import { ShelfInfoMap, ShelfResult, fetchShelfInfo, clearShelfCache, getShelfFromCache, clearShelfCacheForIsbn, getEjkGb } from '../../lib/cloud';
+import { Minus, Loader2 } from 'lucide-react';
+import { clsx } from 'clsx';
+import { BookCoverModal } from './BookCoverModal';
 
-function useIsMobile(breakpoint = 768) {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < breakpoint);
-  useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < breakpoint);
-    window.addEventListener('resize', handler);
-    return () => window.removeEventListener('resize', handler);
-  }, [breakpoint]);
-  return isMobile;
+interface BookTableProps {
+  books: BookWithTrend[];
+  storeCode?: string;
+  storeName?: string;
+  showShelfRow?: boolean;
 }
 
-export default function App() {
-  const [thisWeekData, setThisWeekData] = useState<ProcessedData>({ title: "", books: [] });
-  const [lastWeekData, setLastWeekData] = useState<ProcessedData>({ title: "", books: [] });
-  const [lists, setLists] = useState<{ id: string; defaultGroupCode?: string; defaultLimit?: number }[]>([{ id: 'init-1' }]);
-  const [printingId, setPrintingId] = useState<string | null>(null);
-  const [printMode, setPrintMode] = useState<'normal' | 'a4' | null>(null);
+export interface BookTableRef {
+  fetchAllShelves: () => Promise<void>;
+}
 
-  const [uploadConfirm, setUploadConfirm] = useState<{ file: File; weekKey: string; title: string; existingTitle?: string; fileHash?: string; } | null>(null);
+export const BookTable = forwardRef<BookTableRef, BookTableProps>(({ books, storeCode, storeName, showShelfRow }, ref) => {
+  const [selectedBookForCover, setSelectedBookForCover] = useState<BookWithTrend | null>(null);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [copiedIsbn, setCopiedIsbn] = useState<{ isbn: string; x: number; y: number } | null>(null);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [cloudInfo, setCloudInfo] = useState<CloudFilesResponse | null>(null);
-  const [cloudLoading, setCloudLoading] = useState(false);
-  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
-  const [showCategoryConfig, setShowCategoryConfig] = useState(false);
-  const [storeParts, setStoreParts] = useState<PartConfig[]>([]);
-  const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
+  // PC에서 ISBN 클릭 시 나타나는 팝업을 '최신 패널' 느낌(Emerald)으로 변경
+  const isbnToastPortal = copiedIsbn ? createPortal(
+    <>
+      <div className="fixed z-[9999] pointer-events-none" style={{ left: copiedIsbn.x, top: copiedIsbn.y - 40 }}>
+        <div className="glass-panel px-3 py-1.5 rounded-xl bg-gradient-to-br from-emerald-50 to-white/90 backdrop-blur-md border border-emerald-200 text-emerald-800 text-[11px] font-bold shadow-[0_4px_12px_rgba(16,185,129,0.15)] whitespace-nowrap -translate-x-1/2" style={{ animation: 'isbnToastFade 0.8s ease-in-out forwards' }}>
+          <span className="text-emerald-600 font-mono mr-1">{copiedIsbn.isbn}</span>복사완료!
+        </div>
+      </div>
+      <style>{`@keyframes isbnToastFade { 0% { opacity: 0; transform: translateX(-50%) translateY(4px); } 15%, 70% { opacity: 1; transform: translateX(-50%) translateY(0); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px); } }`}</style>
+    </>,
+    document.body
+  ) : null;
 
-  const selectedPart = storeParts.find(p => p.id === selectedPartId) || null;
-  const activeCategories = selectedPart ? selectedPart.categories.map(c => c.code) : null;
-  const categoryRanks = selectedPart ? Object.fromEntries(selectedPart.categories.map(c => [c.code, c.rank])) : undefined;
-
-  const [scale, setScale] = useState(1);
-  const [position, setPosition] = useState({ x: 50, y: 50 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ x: 0, y: 0 });
-  const canvasRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { installGlobalErrorLogger(); }, []);
-
-  useEffect(() => {
-    if (!selectedStore) { setStoreParts([]); setSelectedPartId(null); return; }
-    setLists([{ id: 'init-1' }]); setPosition({ x: 50, y: 50 });
-    let cancelled = false;
-    fetchStorePartConfig(selectedStore.code).then(config => {
-      if (cancelled) return;
-      if (config && config.length > 0) { setStoreParts(config); setSelectedPartId(config[0].id); } 
-      else { setStoreParts(getDefaultParts()); setSelectedPartId(getDefaultParts()[0].id); }
+  const handleIsbnClick = useCallback((book: BookWithTrend, e: React.MouseEvent) => {
+    if (isMobile) { setSelectedBookForCover(book); return; }
+    const clean = book.isbn.replace(/[-\s]/g, '');
+    navigator.clipboard.writeText(clean).catch(() => {
+      const ta = document.createElement('textarea'); ta.value = clean; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
     });
-    return () => { cancelled = true; };
-  }, [selectedStore]);
-
-  const handleLoadPartLists = useCallback(() => {
-    if (selectedPart && selectedPart.categories.length > 0) {
-      const autoLists = selectedPart.categories.map((cat, idx) => ({ id: `part-${selectedPart.id}-cat-${idx}`, defaultGroupCode: cat.code, defaultLimit: cat.rank, }));
-      setLists(autoLists); setPosition({ x: 50, y: 50 });
-      toast.success(`${selectedPart.name} 파트의 ${selectedPart.categories.length}개 리스트를 불러왔습니다`);
-    } else { toast.info('선택된 파트에 등록된 조코드가 없습니다'); }
-  }, [selectedPart]);
-
-  const handleClearLists = useCallback(() => {
-    setLists([{ id: 'init-1' }]); setPosition({ x: 50, y: 50 });
-    toast.success('리스트가 초기화되었습니다');
-  }, []);
-
-  const isMobile = useIsMobile();
-
-  const loadFromCloud = useCallback(async (silent = false) => {
-    setCloudLoading(true);
-    try {
-      const info = await fetchCloudFiles();
-      setCloudInfo(info);
-      let loaded = 0;
-      if (info.thisWeek?.exists && info.thisWeek.url) {
-        try { const buffer = await downloadFileAsBuffer(info.thisWeek.url); setThisWeekData(parseExcelFromBuffer(buffer)); loaded++; } catch (e) { console.error(e); }
-      }
-      if (info.lastWeek?.exists && info.lastWeek.url) {
-        try { const buffer = await downloadFileAsBuffer(info.lastWeek.url); setLastWeekData(parseExcelFromBuffer(buffer)); loaded++; } catch (e) { console.error(e); }
-      }
-      if (!silent) { if (loaded > 0) toast.success(`클라우드에서 ${loaded}개 파일을 불러왔습니다`); else toast.info('클라우드에 업로드된 파일이 없습니다'); }
-    } catch (e) {
-      if (!silent) toast.error('클라우드 연결 실패');
-    } finally { setCloudLoading(false); }
-  }, []);
-
-  useEffect(() => { loadFromCloud(true); }, [loadFromCloud]);
-
-  useEffect(() => {
-    const handler = () => setPrintMode(null);
-    window.addEventListener('afterprint', handler);
-    return () => window.removeEventListener('afterprint', handler);
-  }, []);
-
-  const handleFileUpload = async (file: File) => {
-    try {
-      if (file.size > 3 * 1024 * 1024) return toast.error('파일 용량 초과: 최대 3MB');
-      const data = await parseExcel(file);
-      const weekKey = extractWeekKey(data.title);
-      if (!weekKey) return toast.error('주차 정보를 찾을 수 없습니다.');
-      const fileHash = await computeFileHash(file);
-      const existingFile = [cloudInfo?.thisWeek, cloudInfo?.lastWeek].find(f => f?.exists && f.weekKey === weekKey);
-      if (existingFile) {
-        if (existingFile.fileHash === fileHash) return toast.info('동일한 파일이 이미 있습니다.');
-        setUploadConfirm({ file, weekKey, title: data.title, existingTitle: existingFile.title || existingFile.filename, fileHash });
-        return;
-      }
-      await doUpload(file, weekKey, data.title, fileHash);
-    } catch (e) { toast.error("파일 처리 실패"); }
-  };
-
-  const doUpload = async (file: File, weekKey: string, title: string, fileHash?: string) => {
-    try { await uploadToCloud(file, weekKey, title, fileHash); toast.success(`${weekKey} 업로드 완료`); } 
-    catch (e) { toast.error('업로드 실패'); }
-    await loadFromCloud(true);
-  };
-
-  const handleUploadConfirm = async () => {
-    if (!uploadConfirm) return;
-    const { file, weekKey, title, fileHash } = uploadConfirm;
-    setUploadConfirm(null);
-    await doUpload(file, weekKey, title, fileHash);
-  };
-
-  const handleUploadCancel = () => { setUploadConfirm(null); toast.info('업로드 취소됨'); };
-  const handleAddList = () => setLists(prev => [...prev, { id: `list-${Date.now()}` }]);
-  const handleDeleteList = (id: string) => setLists(prev => prev.filter(l => l.id !== id));
-  
-  const handleGlobalPrint = () => window.print();
-  const handleGlobalPrintA4 = () => { setPrintMode('a4'); setTimeout(() => { window.print(); setPrintMode(null); }, 100); };
-  const handlePrintCard = (id: string) => { setPrintingId(id); setTimeout(() => { window.print(); setPrintingId(null); }, 100); };
-
-  useEffect(() => {
-    const el = canvasRef.current;
-    if (!el || isMobile) return;
-    const handler = (e: WheelEvent) => {
-      e.preventDefault();
-      if (e.ctrlKey) setScale(prev => Math.min(Math.max(0.1, prev - e.deltaY * 0.001), 3));
-      else setPosition(prev => ({ x: prev.x - (e.shiftKey ? e.deltaY : e.deltaX) * 1.5, y: prev.y - (e.shiftKey ? 0 : e.deltaY) * 1.5 }));
-    };
-    el.addEventListener('wheel', handler, { passive: false });
-    return () => el.removeEventListener('wheel', handler);
+    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    setCopiedIsbn({ isbn: clean, x: e.clientX, y: e.clientY });
+    copiedTimerRef.current = setTimeout(() => setCopiedIsbn(null), 800);
   }, [isMobile]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('a, button, input, select, textarea, [role="button"], [data-no-drag]')) return;
-    setIsDragging(true); dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
+  const [shelfInfo, setShelfInfo] = useState<ShelfInfoMap>({});
+  const [loadingIsbns, setLoadingIsbns] = useState<Set<string>>(new Set());
+  const [expandedIsbns, setExpandedIsbns] = useState<Set<string>>(new Set());
+  const prevStoreRef = useRef(storeCode);
+
+  useEffect(() => {
+    if (prevStoreRef.current !== storeCode) {
+      prevStoreRef.current = storeCode; setShelfInfo({}); setExpandedIsbns(new Set()); setLoadingIsbns(new Set()); clearShelfCache();
+    }
+  }, [storeCode]);
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler); return () => window.removeEventListener('resize', handler);
+  }, []);
+
+  const desktopGridTemplate = "4.63fr 14.13fr 30.63fr 5fr";
+  const showShelf = isMobile && !!storeCode && !!showShelfRow;
+
+  const fetchSingleShelf = useCallback(async (isbn: string) => {
+    if (!storeCode || shelfInfo[isbn] !== undefined) return;
+    setLoadingIsbns(prev => new Set([...prev, isbn]));
+    try { const result = await fetchShelfInfo(storeCode, [isbn]); setShelfInfo(prev => ({ ...prev, ...result })); } 
+    catch (e) { setShelfInfo(prev => ({ ...prev, [isbn]: null })); } 
+    finally { setLoadingIsbns(prev => { const next = new Set(prev); next.delete(isbn); return next; }); }
+  }, [storeCode, shelfInfo]);
+
+  const handleTitleClick = useCallback(async (book: BookWithTrend) => {
+    if (!storeCode) return;
+    if (!isMobile) { openKioskWindow(book); return; }
+    if (!showShelfRow) return;
+    if (expandedIsbns.has(book.isbn)) { openKioskWindow(book); return; }
+    setExpandedIsbns(prev => new Set([...prev, book.isbn])); fetchSingleShelf(book.isbn);
+  }, [storeCode, isMobile, showShelfRow, expandedIsbns, fetchSingleShelf]);
+
+  useImperativeHandle(ref, () => ({
+    fetchAllShelves: async () => {
+      if (!storeCode || !showShelfRow) return;
+      const isbns = books.map(b => b.isbn);
+      setExpandedIsbns(new Set(isbns));
+      const uncached = isbns.filter(isbn => shelfInfo[isbn] === undefined);
+      if (uncached.length === 0) return;
+      const sc = storeCode;
+
+      for (let i = 0; i < uncached.length; i++) {
+        await fetchSingleShelf(uncached[i]);
+        if (i < uncached.length - 1) await new Promise(r => setTimeout(r, 300 + Math.random() * 500));
+      }
+      const failed = uncached.filter(isbn => getShelfFromCache(sc, isbn) === null);
+      if (failed.length === 0) return;
+      
+      for (let i = 0; i < failed.length; i++) {
+        clearShelfCacheForIsbn(sc, failed[i]);
+        setShelfInfo(prev => { const next = { ...prev }; delete next[failed[i]]; return next; });
+        await fetchSingleShelf(failed[i]);
+        if (i < failed.length - 1) await new Promise(r => setTimeout(r, 300 + Math.random() * 500));
+      }
+    },
+  }), [storeCode, showShelfRow, books, shelfInfo, fetchSingleShelf]);
+
+  const openKioskWindow = (book: BookWithTrend) => {
+    if (!storeCode) return;
+    const cleanIsbn = book.isbn.replace(/[-\s]/g, '');
+    const kioskUrl = `https://kiosk.kyobobook.co.kr/bookInfoInk?site=${storeCode}&barcode=${cleanIsbn}&ejkGb=${getEjkGb(cleanIsbn)}`;
+    const newWin = window.open('', `kiosk_${cleanIsbn}`, `width=540,height=${Math.min(window.screen.availHeight - 100, 900)},left=${window.screenX + Math.round((window.outerWidth - 540) / 2)},top=${window.screenY + 50},scrollbars=yes,resizable=yes`);
+    if (!newWin) return alert('팝업이 차단되었습니다.');
+    const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${book.title}</title><style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;overflow:hidden;background:#fff}iframe{width:100%;height:100%;border:none;display:block}.print-btn{position:fixed;bottom:12px;right:12px;z-index:999;width:36px;height:36px;border-radius:50%;border:none;background:#2563eb;color:#fff;font-size:16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;opacity:0.7;transition:opacity 0.2s}.print-btn:hover{opacity:1}@media print{.print-btn{display:none}}</style></head><body><button class="print-btn" onclick="window.print()" title="인쇄">&#x1F5A8;</button><iframe src="${kioskUrl}" sandbox="allow-scripts allow-same-origin allow-popups"></iframe></body></html>`;
+    newWin.document.write(html); newWin.document.close();
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) { e.preventDefault(); setPosition({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y }); }
+  const renderShelfCard = (shelf: ShelfResult | null | undefined, index: number, trend: string, isLoading: boolean) => {
+    const isNew = trend === 'new';
+    const isOut = trend === 'out';
+    const isHighlight = isNew || isOut;
+
+    if (isLoading) return <div className={clsx("flex items-center justify-center h-full gap-1", isHighlight ? "text-white/60" : "text-gray-400")}><Loader2 size={10} className="animate-spin" /><span className="text-[8px]">조회중</span></div>;
+    const loc = shelf?.locations?.[index];
+    if (!loc) return <span className={clsx("text-[8px]", isHighlight ? "text-white/40" : "text-gray-300")}>-</span>;
+
+    return (
+      <div className={clsx("rounded-lg px-1.5 py-1 text-[8px] leading-tight border w-full smooth-transition shadow-sm",
+        isNew ? "bg-[#c8d8eb] border-[#a3bcd8] text-[#1a3a5c]" : 
+        isOut ? "bg-[#fca5a5] border-[#f87171] text-[#450a0a]" : 
+        "bg-white/80 border-[#d5cfc6] text-[#4a3f35]"
+      )}>
+        <div className="font-bold whitespace-normal break-words">{loc.location}</div>
+        {loc.category && <div className={clsx("whitespace-normal break-words mt-px", isNew ? "text-[#3a6494]" : isOut ? "text-[#7f1d1d]" : "text-[#8a7e72]")}>{loc.category}</div>}
+      </div>
+    );
   };
-  const handleMouseUp = () => setIsDragging(false);
+
+  if (showShelf) {
+    return (
+      <>
+        <div className="w-full text-[10px] font-sans">
+          <div className="bg-[#F2F2F2]/80 backdrop-blur-md border-t-2 border-b border-black/80 font-bold text-center">
+            <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', height: '20px' }}>
+              <div className="border-r border-gray-300/80">순위</div><div className="border-r border-gray-300/80">ISBN</div><div>도서명</div>
+            </div>
+          </div>
+          {books.map((book) => {
+            const isNew = book.trend === 'new'; const isOut = book.trend === 'out'; const isHighlight = isNew || isOut;
+            const isExpanded = expandedIsbns.has(book.isbn); const isThisLoading = loadingIsbns.has(book.isbn); const bookShelf = shelfInfo[book.isbn];
+
+            return (
+              <div key={`${book.isbn}-${book.trend}`}>
+                <div className={clsx("border-b smooth-transition", isExpanded && !isHighlight ? "border-amber-300/50" : "border-[#E1E1E1]/50", isNew && "bg-blue-600/90 backdrop-blur-sm text-white", isOut && "bg-red-600/90 backdrop-blur-sm text-white", !isHighlight && "text-black bg-white/40 hover:bg-white/60")}>
+                  <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', minHeight: '24px' }}>
+                    <div className={clsx("flex flex-col items-center justify-center border-r py-0.5", isHighlight ? "border-white/20" : "border-gray-200")}>
+                      <span className="font-bold">{book.rank > 0 ? book.rank : ''}</span>
+                      {book.trend === 'same' && <Minus size={8} className={isHighlight ? "text-white/60" : "text-gray-300"} />}
+                      {book.trend === 'up' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white/80" : "text-red-500")}>▲{book.trendValue}</span>}
+                      {book.trend === 'down' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white/80" : "text-blue-500")}>▼{book.trendValue}</span>}
+                      {book.trend === 'new' && <span className="text-[8px] leading-none text-white">NEW</span>}
+                      {book.trend === 'out' && <span className="text-[8px] leading-none text-white">OUT</span>}
+                    </div>
+                    <div className={clsx("text-center border-r cursor-pointer active:scale-95 text-[9px] tracking-tighter py-0.5 smooth-transition", isHighlight ? "border-white/20 text-white underline decoration-white/50" : "border-gray-200 text-[#555] underline decoration-gray-300 hover:text-blue-600")} onClick={(e) => handleIsbnClick(book, e)}>{book.isbn}</div>
+                    <div className={clsx("flex items-center px-1.5 py-0.5 cursor-pointer active:scale-95 min-w-0 smooth-transition", isExpanded && !isHighlight && "text-amber-700 font-bold", isThisLoading && "animate-pulse")} onClick={() => handleTitleClick(book)}>
+                      <span className="truncate font-semibold text-left flex-1 min-w-0">{book.title}</span>
+                      {isThisLoading && <Loader2 size={8} className="shrink-0 ml-1 animate-spin" />}
+                      {!isThisLoading && bookShelf?.stock && <span className={clsx("shrink-0 ml-1 text-[7px] px-1 py-px rounded-md font-bold whitespace-nowrap shadow-sm", isNew ? "bg-[#0000CD]/25 text-[#FFF79B] border border-[#FFF79B]/30" : isOut ? "bg-red-900/30 text-[#fca5a5] border border-red-300/30" : "bg-white/80 text-[#7a6e5f] border border-[#d5cfc6]")}>{bookShelf.stock}부</span>}
+                    </div>
+                  </div>
+                </div>
+                {isExpanded && (() => {
+                  const shelfLoaded = !isThisLoading && bookShelf !== undefined;
+                  return (
+                  <div className={clsx("grid border-b-2 overflow-hidden smooth-transition", shelfLoaded ? isNew ? "border-[#7eaad4] bg-[#3b6fa0]/90 backdrop-blur-sm" : isOut ? "border-[#f87171] bg-[#991b1b]/90 backdrop-blur-sm" : "border-[#d5cfc6] bg-[#f5f0e8]/80 backdrop-blur-sm" : "border-gray-200 bg-white/50")} style={{ gridTemplateColumns: '1fr 1fr', minHeight: '28px' }}>
+                    <div className={clsx("px-1 py-1 flex items-start border-r", shelfLoaded ? isHighlight ? "border-white/20" : "border-[#d5cfc6]" : "border-gray-200")}>{renderShelfCard(bookShelf, 0, book.trend, isThisLoading)}</div>
+                    <div className="px-1 py-1 flex items-start">{renderShelfCard(bookShelf, 1, book.trend, isThisLoading)}</div>
+                  </div>
+                  );
+                })()}
+              </div>
+            );
+          })}
+        </div>
+        {selectedBookForCover && <BookCoverModal isbn={selectedBookForCover.isbn} bookTitle={selectedBookForCover.title} onClose={() => setSelectedBookForCover(null)} />}
+        {isbnToastPortal}
+      </>
+    );
+  }
 
   if (isMobile) {
     return (
-      <ErrorBoundary>
-        <Toaster position="top-center" theme="light" />
-        <MobileView
-          thisWeekBooks={thisWeekData.books}
-          lastWeekBooks={lastWeekData.books}
-          title={thisWeekData.title}
-          lastWeekTitle={lastWeekData.title}
-          cloudLoading={cloudLoading}
-          cloudInfo={cloudInfo}
-          onRefreshCloud={() => loadFromCloud(false)}
-        />
-      </ErrorBoundary>
+      <>
+        <div className="w-full text-[10px] font-sans">
+          <div className="bg-[#F2F2F2]/80 backdrop-blur-md border-t-2 border-b border-black/80 font-bold text-center">
+            <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', height: '20px' }}>
+              <div className="border-r border-gray-300/80">순위</div><div className="border-r border-gray-300/80">ISBN</div><div>도서명</div>
+            </div>
+          </div>
+          {books.map((book) => {
+            const isNew = book.trend === 'new'; const isOut = book.trend === 'out'; const isHighlight = isNew || isOut;
+            return (
+              <div key={`${book.isbn}-${book.trend}`} className={clsx("border-b border-[#E1E1E1]/50 smooth-transition", isNew && "bg-blue-600/90 text-white", isOut && "bg-red-600/90 text-white", !isHighlight && "text-black bg-white/40 hover:bg-white/60")}>
+                <div className="grid items-center" style={{ gridTemplateColumns: '2.2rem 5.5rem minmax(0,1fr)', minHeight: '24px' }}>
+                  <div className={clsx("flex flex-col items-center justify-center border-r py-0.5", isHighlight ? "border-white/20" : "border-gray-200")}>
+                    <span className="font-bold">{book.rank > 0 ? book.rank : ''}</span>
+                    {book.trend === 'same' && <Minus size={8} className={isHighlight ? "text-white/60" : "text-gray-300"} />}
+                    {book.trend === 'up' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white/80" : "text-red-500")}>▲{book.trendValue}</span>}
+                    {book.trend === 'down' && <span className={clsx("text-[8px] leading-none", isHighlight ? "text-white/80" : "text-blue-500")}>▼{book.trendValue}</span>}
+                    {book.trend === 'new' && <span className="text-[8px] leading-none text-white">NEW</span>}
+                    {book.trend === 'out' && <span className="text-[8px] leading-none text-white">OUT</span>}
+                  </div>
+                  <div className={clsx("text-center border-r cursor-pointer active:scale-95 text-[9px] tracking-tighter py-0.5 smooth-transition", isHighlight ? "border-white/20 text-white underline decoration-white/50" : "border-gray-200 text-[#555] underline decoration-gray-300 hover:text-blue-600")} onClick={() => setSelectedBookForCover(book)}>{book.isbn}</div>
+                  <div className="px-1.5 py-0.5 truncate font-semibold text-left">{book.title}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {selectedBookForCover && <BookCoverModal isbn={selectedBookForCover.isbn} bookTitle={selectedBookForCover.title} onClose={() => setSelectedBookForCover(null)} />}
+      </>
     );
   }
 
   return (
-    <ErrorBoundary>
-    {/* 밝은 화이트/슬레이트 기반의 배경과 은은한 유리 질감의 빛(Ambient Lights) */}
-    <div className="h-screen w-screen bg-[#f8fafc] overflow-hidden flex flex-col font-sans main-desktop-wrapper text-slate-800 relative selection:bg-blue-200">
-      
-      {/* 감성적인 라이트 이펙트 (배경 글래스모피즘) */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-blue-400/10 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-purple-400/10 blur-[120px]" />
-        <div className="absolute top-[20%] right-[10%] w-[30vw] h-[30vw] rounded-full bg-emerald-400/10 blur-[100px]" />
-      </div>
-
-      <Toaster position="top-center" theme="light" />
-      
-      <div className="z-50 relative topbar-wrapper">
-        <TopBar 
-          titleThisWeek={thisWeekData.title}
-          titleLastWeek={lastWeekData.title}
-          onUploadFile={handleFileUpload}
-          onAddList={handleAddList}
-          onPrint={handleGlobalPrint}
-          onPrintA4={handleGlobalPrintA4}
-          cloudInfo={cloudInfo}
-          cloudLoading={cloudLoading}
-          onRefreshCloud={() => loadFromCloud(false)}
-          selectedStore={selectedStore}
-          onSelectStore={setSelectedStore}
-          onOpenCategoryConfig={() => setShowCategoryConfig(true)}
-          storeParts={storeParts}
-          selectedPartId={selectedPartId}
-          onSelectPart={setSelectedPartId}
-          onLoadPartLists={handleLoadPartLists}
-          onClearLists={handleClearLists}
-        />
-      </div>
-
-      <div 
-        className="flex-1 relative overflow-hidden canvas-area z-10"
-        style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(0, 0, 0, 0.03) 1px, transparent 0)', backgroundSize: '32px 32px' }}
-        ref={canvasRef}
-        onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}
-      >
-        <div className="absolute top-5 left-5 z-40 bg-white/60 border border-white shadow-[0_8px_32px_rgba(0,0,0,0.05)] text-slate-500 font-bold backdrop-blur-xl px-4 py-2 rounded-2xl text-xs pointer-events-none canvas-hint transition-all duration-300">
-          ✨ 휠: 상하 이동 | Ctrl + 휠: 확대/축소 | 드래그: 자유 이동
+    <>
+      <div className="w-full text-[10px] font-sans">
+        <div className="grid bg-[#F2F2F2]/80 backdrop-blur-md border-t-2 border-b border-black/80 font-bold text-center items-center" style={{ gridTemplateColumns: desktopGridTemplate, height: '25px' }}>
+          <div>순위</div><div>ISBN</div><div>도서명</div><div>변동</div>
         </div>
-
-        <div 
-          style={{ 
-            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`, 
-            transformOrigin: '0 0', 
-            display: 'flex', 
-            gap: '48px', 
-            alignItems: 'flex-start', 
-            position: 'absolute',
-            transition: isDragging ? 'none' : 'transform 0.15s ease-out'
-          }}
-          className={`canvas-content ${printingId ? "print:transform-none print:static" : ""}`}
-        >
-          {lists.map(list => (
-            <motion.div 
-              layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
-              key={list.id} 
-              className={`list-wrapper smooth-transition hover:-translate-y-2 hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)] rounded-[2rem] p-2 ${printingId && printingId !== list.id ? "print:hidden" : "print:block"}`}
-            >
-              <ListCard 
-                id={list.id} thisWeekBooks={thisWeekData.books} lastWeekBooks={lastWeekData.books} title={thisWeekData.title} lastWeekTitle={lastWeekData.title}
-                onDelete={() => handleDeleteList(list.id)} onPrint={handlePrintCard} storeCode={selectedStore?.code} storeName={selectedStore?.name}
-                availableCategories={activeCategories || undefined} categoryRanks={categoryRanks} defaultGroupCode={list.defaultGroupCode} defaultLimit={list.defaultLimit}
-              />
-            </motion.div>
-          ))}
-        </div>
+        {books.map((book) => {
+          const isNew = book.trend === 'new'; const isOut = book.trend === 'out';
+          return (
+            <div key={`${book.isbn}-${book.trend}`} className={clsx("grid border-b border-[#E1E1E1]/50 items-center smooth-transition", isNew ? "bg-blue-600/90 text-white" : isOut ? "bg-red-600/90 text-white" : "text-black bg-white/40 hover:bg-white/60")} style={{ gridTemplateColumns: desktopGridTemplate, height: '25px' }}>
+              <div className="text-center font-bold">{book.rank > 0 ? book.rank : ''}</div>
+              <div className={clsx("text-center tracking-tighter cursor-pointer transition-all active:scale-95", (isOut || isNew) ? "text-white underline decoration-white/50" : "text-[#555] underline decoration-gray-300 hover:text-blue-600 hover:decoration-blue-400")} onClick={(e) => handleIsbnClick(book, e)}>{book.isbn}</div>
+              <div className={clsx("px-2 leading-tight truncate font-semibold text-left smooth-transition", storeCode ? "cursor-pointer active:scale-95" : "", storeCode && !isNew && !isOut ? "hover:text-emerald-700" : "")} onClick={() => handleTitleClick(book)}>{book.title}</div>
+              <div className="flex justify-center items-center h-full font-bold">
+                {book.trend === 'same' && <Minus size={10} className={(isOut || isNew) ? "text-white/80" : "text-gray-400"} />}
+                {book.trend === 'up' && <div className={clsx("flex items-center", isNew ? "text-white" : "text-red-600")}><span className="text-[8px] mr-0.5">▲</span><span>{book.trendValue}</span></div>}
+                {book.trend === 'down' && <div className={clsx("flex items-center", isNew ? "text-white" : "text-blue-600")}><span className="text-[8px] mr-0.5">▼</span><span>{book.trendValue}</span></div>}
+                {book.trend === 'new' && <span className="text-white text-[9px]">NEW</span>}
+                {book.trend === 'out' && <span className="text-white text-[9px]">OUT</span>}
+              </div>
+            </div>
+          );
+        })}
       </div>
-
-      <style>{`
-        @media screen {
-          /* 글래스모피즘 기반의 리스트 카드 스타일 오버라이드 */
-          .list-card-print { background: rgba(255, 255, 255, 0.7) !important; color: #1e293b !important; backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.8); border-radius: 1.5rem; padding: 1rem !important; box-shadow: 0 10px 40px rgba(0,0,0,0.04) !important; }
-          .list-card-print h2, .list-card-print h3 { color: #0f172a !important; }
-          .list-card-print select, .list-card-print input { background: rgba(255,255,255,0.6) !important; color: #1e293b !important; border: 1px solid rgba(255,255,255,0.5) !important; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02) !important; }
-        }
-        @media print {
-          @page { margin: 5mm; }
-          body, html { background: white !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; overflow: visible !important; height: auto !important; width: auto !important; }
-          .main-desktop-wrapper { background: white !important; height: auto !important; overflow: visible !important; display: block !important; }
-          .topbar-wrapper, .canvas-hint { display: none !important; }
-          .canvas-area { overflow: visible !important; height: auto !important; position: static !important; background: none !important; }
-          .list-wrapper { background: none !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
-          .list-card-print { background: white !important; color: black !important; border: none !important; backdrop-filter: none !important; box-shadow: none !important; }
-          .list-card-print h2, .list-card-print h3, .list-card-print select, .list-card-print input { color: black !important; background: white !important; border: 1px solid #ccc !important; box-shadow: none !important; }
-          ${printMode === 'a4' ? `
-            @page { size: A4 portrait; margin: 5mm; }
-            .canvas-content { transform: none !important; position: static !important; display: flex !important; flex-wrap: wrap !important; gap: 0 !important; width: 100% !important; }
-            .list-wrapper { display: block !important; width: 50% !important; box-sizing: border-box !important; padding: 0 2mm !important; page-break-after: auto !important; break-after: auto !important; page-break-inside: avoid !important; break-inside: avoid !important; }
-            .list-wrapper:nth-child(2n) { page-break-after: always !important; break-after: page !important; }
-            .list-card-print { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 2px !important; box-shadow: none !important; border: none !important; }
-          ` : `
-            .canvas-content { transform: none !important; position: static !important; display: block !important; gap: 0 !important; }
-            .list-wrapper { display: block !important; page-break-after: always !important; break-after: page !important; }
-            .list-card-print { width: 400px !important; max-width: 400px !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: none !important; }
-          `}
-        }
-      `}</style>
-
-      {uploadConfirm && <UploadConfirmDialog weekKey={uploadConfirm.weekKey} title={uploadConfirm.title} existingTitle={uploadConfirm.existingTitle} contentChanged={true} onConfirm={handleUploadConfirm} onCancel={handleUploadCancel} />}
-      {showCategoryConfig && <CategoryConfigDialog open={showCategoryConfig} onClose={() => setShowCategoryConfig(false)} initialStore={selectedStore} onSaved={(storeCode, parts) => { if (selectedStore && selectedStore.code === storeCode) { setStoreParts(parts); if (parts.length > 0) { if (!parts.find(p => p.id === selectedPartId)) setSelectedPartId(parts[0].id); } else setSelectedPartId(null); } }} />}
-    </div>
-    </ErrorBoundary>
+      {selectedBookForCover && <BookCoverModal isbn={selectedBookForCover.isbn} bookTitle={selectedBookForCover.title} onClose={() => setSelectedBookForCover(null)} />}
+      {isbnToastPortal}
+    </>
   );
-}
+});
+BookTable.displayName = 'BookTable';
