@@ -112,18 +112,18 @@ function PasswordDialog({ onConfirm, onCancel, title }: {
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => { inputRef.current?.focus(); }, []);
   return createPortal(
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onCancel}>
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/30 backdrop-blur-[12px]" onClick={onCancel}>
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-[#0B0F19]/95 border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8),0_0_30px_rgba(34,211,238,0.1)] rounded-2xl p-5 w-[320px]" 
+        className="bg-white/90 backdrop-blur-xl border border-white shadow-[0_30px_60px_rgba(0,0,0,0.12)] rounded-3xl p-6 w-[320px]" 
         onClick={e => e.stopPropagation()} 
         data-no-drag
       >
         <div className="flex items-center gap-2 mb-4">
-          <Lock size={16} className="text-slate-400" />
-          <h3 className="font-bold text-sm text-slate-200">{title}</h3>
+          <Lock size={16} className="text-slate-600" />
+          <h3 className="font-bold text-sm text-slate-800">{title}</h3>
         </div>
         <input
           ref={inputRef}
@@ -132,14 +132,14 @@ function PasswordDialog({ onConfirm, onCancel, title }: {
           onChange={e => setPw(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && pw && onConfirm(pw)}
           placeholder="암호를 입력하세요"
-          className="w-full border border-white/10 rounded-xl px-3 py-2 text-sm font-bold text-white mb-3 outline-none focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(34,211,238,0.2)] bg-black/50 placeholder-slate-600 smooth-transition"
+          className="w-full border border-slate-200/80 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 mb-4 outline-none focus:border-blue-400 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] bg-white/50 placeholder-slate-400 smooth-transition"
         />
         <div className="flex justify-end gap-2">
-          <button onClick={onCancel} className="px-4 py-1.5 text-xs font-bold bg-black/40 border border-white/10 hover:border-slate-400 hover:text-white hover:shadow-[0_0_15px_rgba(203,213,225,0.3)] text-slate-400 rounded-lg smooth-transition active:scale-95">취소</button>
+          <button onClick={onCancel} className="px-4 py-2 text-xs font-bold bg-white border border-slate-200 shadow-sm hover:bg-slate-50 text-slate-700 rounded-xl smooth-transition active:scale-95">취소</button>
           <button
             onClick={() => pw && onConfirm(pw)}
             disabled={!pw}
-            className="px-4 py-1.5 text-xs font-bold bg-black/40 border border-white/10 hover:border-cyan-400 hover:text-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.4),inset_0_0_10px_rgba(34,211,238,0.1)] text-slate-300 rounded-lg disabled:opacity-50 disabled:pointer-events-none smooth-transition active:scale-95"
+            className="px-4 py-2 text-xs font-bold bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 border border-blue-600 text-white rounded-xl shadow-[0_4px_12px_rgba(59,130,246,0.3),inset_0_1px_0_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:pointer-events-none smooth-transition active:scale-95"
           >확인</button>
         </div>
       </motion.div>
@@ -149,9 +149,9 @@ function PasswordDialog({ onConfirm, onCancel, title }: {
 }
 
 const COLORS = [
-  '#ffffff', '#e2e8f0', '#94a3b8', '#475569', '#0f172a',
-  '#f43f5e', '#f97316', '#fbbf24', '#34d399', '#38bdf8',
-  '#818cf8', '#e879f9', '#2dd4bf', '#0ea5e9', '#6366f1',
+  '#000000', '#434343', '#666666', '#999999', '#cccccc',
+  '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6',
+  '#8b5cf6', '#ec4899', '#14b8a6', '#0ea5e9', '#6366f1',
 ];
 
 function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
@@ -165,7 +165,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       type="button"
       onClick={onClick}
       title={title}
-      className={`p-1 rounded smooth-transition active:scale-95 font-bold ${active ? 'bg-cyan-950/60 text-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.2)]' : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
+      className={`p-1.5 rounded-lg smooth-transition active:scale-95 font-bold ${active ? 'bg-blue-100 text-blue-700 shadow-sm' : 'text-slate-600 hover:bg-white hover:shadow-sm'}`}
     >
       {children}
     </button>
@@ -186,35 +186,35 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-white/5 backdrop-blur-md rounded-t-lg relative border-b border-white/10">
+    <div className="flex flex-wrap items-center gap-0.5 px-3 py-2 bg-slate-50/50 backdrop-blur-md rounded-t-2xl relative border-b border-slate-200/60">
       <Btn onClick={() => editor.chain().focus().undo().run()} title="실행취소"><Undo2 size={14} /></Btn>
       <Btn onClick={() => editor.chain().focus().redo().run()} title="다시실행"><Redo2 size={14} /></Btn>
-      <div className="w-px h-4 bg-white/10 mx-1" />
+      <div className="w-px h-4 bg-slate-300/60 mx-1.5" />
       <Btn active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="제목1"><Heading1 size={14} /></Btn>
       <Btn active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="제목2"><Heading2 size={14} /></Btn>
       <Btn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="제목3"><Heading3 size={14} /></Btn>
-      <div className="w-px h-4 bg-white/10 mx-1" />
+      <div className="w-px h-4 bg-slate-300/60 mx-1.5" />
       
-      <div className="flex items-center border border-white/10 bg-black/40 rounded shadow-[0_0_10px_rgba(0,0,0,0.5)] overflow-hidden h-[26px]">
-        <button type="button" onClick={() => { closeAllPopups(); const current = editor.getAttributes('textStyle').fontSize || '16px'; const num = parseInt(current, 10); editor.chain().focus().setFontSize(`${Math.max(10, num - 2)}px`).run(); }} title="글자 작게 (-2px)" className="px-2.5 h-full text-slate-400 hover:text-white hover:bg-white/10 font-bold text-[11px] flex items-center justify-center smooth-transition active:bg-white/20">A-</button>
-        <div className="w-px h-4 bg-white/10" />
-        <button type="button" onClick={() => { closeAllPopups(); const current = editor.getAttributes('textStyle').fontSize || '16px'; const num = parseInt(current, 10); editor.chain().focus().setFontSize(`${Math.min(60, num + 2)}px`).run(); }} title="글자 크게 (+2px)" className="px-2.5 h-full text-slate-400 hover:text-white hover:bg-white/10 font-bold text-[14px] flex items-center justify-center smooth-transition active:bg-white/20">A+</button>
+      <div className="flex items-center border border-slate-200/80 bg-white/80 rounded-lg shadow-sm overflow-hidden h-[28px] mx-1">
+        <button type="button" onClick={() => { closeAllPopups(); const current = editor.getAttributes('textStyle').fontSize || '16px'; const num = parseInt(current, 10); editor.chain().focus().setFontSize(`${Math.max(10, num - 2)}px`).run(); }} title="글자 작게 (-2px)" className="px-2.5 h-full text-slate-700 hover:bg-slate-50 font-bold text-[11px] flex items-center justify-center smooth-transition active:bg-slate-100">A-</button>
+        <div className="w-px h-4 bg-slate-200" />
+        <button type="button" onClick={() => { closeAllPopups(); const current = editor.getAttributes('textStyle').fontSize || '16px'; const num = parseInt(current, 10); editor.chain().focus().setFontSize(`${Math.min(60, num + 2)}px`).run(); }} title="글자 크게 (+2px)" className="px-2.5 h-full text-slate-700 hover:bg-slate-50 font-bold text-[14px] flex items-center justify-center smooth-transition active:bg-slate-100">A+</button>
       </div>
 
-      <div className="w-px h-4 bg-white/10 mx-1" />
+      <div className="w-px h-4 bg-slate-300/60 mx-1.5" />
       <Btn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} title="굵게"><Bold size={14} /></Btn>
       <Btn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title="기울임"><Italic size={14} /></Btn>
       <Btn active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} title="밑줄"><UnderlineIcon size={14} /></Btn>
       <Btn active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()} title="취소선"><Strikethrough size={14} /></Btn>
-      <div className="w-px h-4 bg-white/10 mx-1" />
+      <div className="w-px h-4 bg-slate-300/60 mx-1.5" />
 
       <div className="relative">
         <Btn onClick={() => { closeAllPopups(); setShowColor(!showColor); }} title="글자색">
-          <div className="flex flex-col items-center"><span className="text-[10px] font-bold leading-none">A</span><div className="w-3 h-1 rounded-sm mt-px" style={{ backgroundColor: editor.getAttributes('textStyle').color || '#fff' }} /></div>
+          <div className="flex flex-col items-center"><span className="text-[10px] font-bold leading-none">A</span><div className="w-3 h-1 rounded-sm mt-px" style={{ backgroundColor: editor.getAttributes('textStyle').color || '#000' }} /></div>
         </Btn>
         {showColor && (
-          <div className="absolute top-full left-0 mt-1 z-[100] bg-[#0B0F19]/95 backdrop-blur-md border border-white/10 rounded-xl p-2 grid grid-cols-5 gap-1.5 w-[140px] shadow-[0_0_20px_rgba(0,0,0,0.8)]">
-            {COLORS.map(c => <button key={c} className="w-5 h-5 rounded-full border border-white/20 hover:scale-125 hover:shadow-[0_0_10px_rgba(255,255,255,0.5)] smooth-transition" style={{ backgroundColor: c }} onClick={() => { editor.chain().focus().setColor(c).run(); setShowColor(false); }} />)}
+          <div className="absolute top-full left-0 mt-2 z-[100] bg-white/90 backdrop-blur-xl border border-white rounded-2xl p-3 grid grid-cols-5 gap-2 w-[160px] shadow-[0_20px_40px_rgba(0,0,0,0.1)]">
+            {COLORS.map(c => <button key={c} className="w-5 h-5 rounded-full border border-black/10 hover:scale-125 hover:shadow-md smooth-transition" style={{ backgroundColor: c }} onClick={() => { editor.chain().focus().setColor(c).run(); setShowColor(false); }} />)}
           </div>
         )}
       </div>
@@ -222,21 +222,21 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       <div className="relative">
         <Btn active={editor.isActive('highlight')} onClick={() => { closeAllPopups(); setShowHighlight(!showHighlight); }} title="형광펜"><Highlighter size={14} /></Btn>
         {showHighlight && (
-          <div className="absolute top-full left-0 mt-1 z-[100] bg-[#0B0F19]/95 backdrop-blur-md border border-white/10 rounded-xl p-2 grid grid-cols-4 gap-1.5 w-[120px] shadow-[0_0_20px_rgba(0,0,0,0.8)]">
-            {['#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff', '#fed7aa'].map(c => <button key={c} className="w-5 h-5 rounded-full border border-white/20 hover:scale-125 hover:shadow-[0_0_10px_rgba(255,255,255,0.5)] smooth-transition" style={{ backgroundColor: c }} onClick={() => { editor.chain().focus().toggleHighlight({ color: c }).run(); setShowHighlight(false); }} />)}
-            <button className="w-5 h-5 rounded-full border border-white/10 text-[9px] hover:scale-125 smooth-transition flex items-center justify-center font-bold text-slate-400 hover:text-white" onClick={() => { editor.chain().focus().unsetHighlight().run(); setShowHighlight(false); }}>X</button>
+          <div className="absolute top-full left-0 mt-2 z-[100] bg-white/90 backdrop-blur-xl border border-white rounded-2xl p-3 grid grid-cols-4 gap-2 w-[140px] shadow-[0_20px_40px_rgba(0,0,0,0.1)]">
+            {['#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff', '#fed7aa'].map(c => <button key={c} className="w-5 h-5 rounded-full border border-black/10 hover:scale-125 hover:shadow-md smooth-transition" style={{ backgroundColor: c }} onClick={() => { editor.chain().focus().toggleHighlight({ color: c }).run(); setShowHighlight(false); }} />)}
+            <button className="w-5 h-5 rounded-full border border-slate-200 text-[9px] hover:scale-125 smooth-transition flex items-center justify-center font-bold text-slate-500 bg-white" onClick={() => { editor.chain().focus().unsetHighlight().run(); setShowHighlight(false); }}>X</button>
           </div>
         )}
       </div>
 
-      <div className="w-px h-4 bg-white/10 mx-1" />
+      <div className="w-px h-4 bg-slate-300/60 mx-1.5" />
       <Btn active={editor.isActive({ textAlign: 'left' })} onClick={() => editor.chain().focus().setTextAlign('left').run()} title="왼쪽정렬"><AlignLeft size={14} /></Btn>
       <Btn active={editor.isActive({ textAlign: 'center' })} onClick={() => editor.chain().focus().setTextAlign('center').run()} title="가운데정렬"><AlignCenter size={14} /></Btn>
       <Btn active={editor.isActive({ textAlign: 'right' })} onClick={() => editor.chain().focus().setTextAlign('right').run()} title="오른쪽정렬"><AlignRight size={14} /></Btn>
-      <div className="w-px h-4 bg-white/10 mx-1" />
+      <div className="w-px h-4 bg-slate-300/60 mx-1.5" />
       <Btn active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()} title="목록"><List size={14} /></Btn>
       <Btn active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="번호목록"><ListOrdered size={14} /></Btn>
-      <div className="w-px h-4 bg-white/10 mx-1" />
+      <div className="w-px h-4 bg-slate-300/60 mx-1.5" />
       <Btn onClick={addTable} title="표 삽입"><TableIcon size={14} /></Btn>
       <Btn onClick={addImage} title="이미지 삽입"><Image size={14} /></Btn>
     </div>
@@ -260,44 +260,44 @@ function WriteDialog({ initialData, onSave, onCancel, saving }: {
     ],
     content: initialData?.content || '<p></p>',
     editorProps: {
-      attributes: { class: 'prose prose-sm max-w-none focus:outline-none min-h-[350px] px-5 py-4 bg-black/20 rounded-b-lg text-slate-200 font-medium' },
+      attributes: { class: 'prose prose-sm max-w-none focus:outline-none min-h-[350px] px-6 py-5 bg-white/60 rounded-b-2xl text-slate-800 font-medium' },
     },
   });
 
   return createPortal(
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/30 backdrop-blur-[12px]">
       <motion.div
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="bg-[#0B0F19]/95 rounded-2xl w-[90vw] max-w-[750px] max-h-[90vh] flex flex-col overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.8),0_0_30px_rgba(34,211,238,0.1)] border border-white/10"
+        className="bg-white/80 backdrop-blur-[40px] rounded-[2rem] w-[90vw] max-w-[750px] max-h-[90vh] flex flex-col overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.12)] border border-white"
         onClick={e => e.stopPropagation()}
         data-no-drag
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-white/5">
-          <h2 className="font-bold text-base text-slate-200">{initialData ? '게시글 수정' : '게시글 작성'}</h2>
-          <button onClick={onCancel} className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-full smooth-transition"><X size={18} /></button>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200/50 bg-white/40">
+          <h2 className="font-bold text-lg text-slate-800">{initialData ? '게시글 수정' : '게시글 작성'}</h2>
+          <button onClick={onCancel} className="p-2 text-slate-500 hover:text-slate-800 hover:bg-white/80 rounded-full smooth-transition shadow-sm"><X size={18} /></button>
         </div>
 
-        <div className="px-5 pt-4">
+        <div className="px-6 pt-5 bg-transparent">
           <input
             type="text"
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="제목을 입력하세요"
-            className="w-full text-lg font-bold border-b border-white/10 text-white pb-2 outline-none focus:border-cyan-400 focus:shadow-[0_4px_10px_rgba(34,211,238,0.1)] bg-transparent placeholder-slate-600 smooth-transition"
+            className="w-full text-xl font-bold border-b-2 border-slate-200/80 text-slate-800 pb-2 outline-none focus:border-blue-400 bg-transparent placeholder-slate-400 smooth-transition"
           />
         </div>
 
-        <div className="flex flex-col flex-1 mx-5 mt-4 mb-4 border border-white/10 rounded-xl min-h-0 bg-black/40 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] overflow-hidden">
+        <div className="flex flex-col flex-1 mx-6 mt-4 mb-5 border border-slate-200/80 rounded-2xl min-h-0 bg-white/40 shadow-inner overflow-hidden">
           <div className="shrink-0"><EditorToolbar editor={editor} /></div>
           <div className="flex-1 overflow-auto custom-scrollbar"><EditorContent editor={editor} /></div>
         </div>
 
-        <div className="flex justify-end gap-2 px-5 py-3 border-t border-white/10 bg-white/5 shrink-0">
-          <button onClick={onCancel} className="px-5 py-2 text-sm font-bold bg-black/40 border border-white/10 hover:border-slate-400 hover:text-white hover:shadow-[0_0_15px_rgba(203,213,225,0.3)] text-slate-300 rounded-xl smooth-transition active:scale-95">취소</button>
-          <button onClick={() => { if (!title.trim()) { alert('제목을 입력해주세요.'); return; } if (!editor?.getHTML() || editor.isEmpty) { alert('내용을 입력해주세요.'); return; } onSave(title.trim(), editor.getHTML()); }} disabled={saving || !title.trim()} className="px-6 py-2 text-sm bg-black/40 border border-white/10 hover:border-cyan-400 hover:text-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.4),inset_0_0_10px_rgba(34,211,238,0.1)] hover:bg-cyan-950/30 text-slate-300 rounded-xl disabled:opacity-50 disabled:pointer-events-none flex items-center gap-1.5 font-bold smooth-transition active:scale-95">
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-200/50 bg-white/40 shrink-0">
+          <button onClick={onCancel} className="px-6 py-2.5 text-sm font-bold bg-white border border-slate-200 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:bg-slate-50 hover:shadow-md text-slate-700 rounded-xl smooth-transition active:scale-95">취소</button>
+          <button onClick={() => { if (!title.trim()) { alert('제목을 입력해주세요.'); return; } if (!editor?.getHTML() || editor.isEmpty) { alert('내용을 입력해주세요.'); return; } onSave(title.trim(), editor.getHTML()); }} disabled={saving || !title.trim()} className="px-8 py-2.5 text-sm bg-gradient-to-b from-blue-500 to-blue-600 border border-blue-600 hover:from-blue-400 hover:to-blue-500 text-white rounded-xl shadow-[0_4px_12px_rgba(59,130,246,0.3),inset_0_1px_0_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:pointer-events-none flex items-center gap-1.5 font-bold smooth-transition active:scale-95">
             {saving && <Loader2 size={14} className="animate-spin" />} 저장
           </button>
         </div>
@@ -319,38 +319,38 @@ function ViewDialog({ notice, onClose, onEdit, onDelete }: {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/30 backdrop-blur-[12px]" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="bg-[#0B0F19]/95 rounded-2xl w-[90vw] max-w-[700px] max-h-[85vh] flex flex-col overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.8),0_0_30px_rgba(34,211,238,0.1)] border border-white/10"
+        className="bg-white/80 backdrop-blur-[40px] shadow-[0_30px_60px_rgba(0,0,0,0.12)] border border-white rounded-[2rem] w-[90vw] max-w-[700px] max-h-[85vh] flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
         data-no-drag
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-white/5">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200/50 bg-white/40">
           <div className="flex-1 min-w-0 pr-4">
-            <h2 className="font-bold text-lg text-white truncate mb-1">{notice.title}</h2>
-            <div className="text-xs font-bold text-slate-400">
+            <h2 className="font-bold text-xl text-slate-800 truncate mb-1.5">{notice.title}</h2>
+            <div className="text-xs font-bold text-slate-500">
               {formatDate(notice.createdAt)}
-              {notice.updatedAt && <span className="ml-2 pl-2 border-l border-white/20">수정됨: {formatDate(notice.updatedAt)}</span>}
+              {notice.updatedAt && <span className="ml-2 pl-2 border-l border-slate-300">수정됨: {formatDate(notice.updatedAt)}</span>}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button onClick={onEdit} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-black/40 border border-white/10 hover:border-indigo-400 hover:text-indigo-400 hover:shadow-[0_0_15px_rgba(129,140,248,0.4),inset_0_0_10px_rgba(129,140,248,0.1)] text-slate-300 rounded-xl smooth-transition active:scale-95 font-bold">
+            <button onClick={onEdit} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-white border border-slate-200 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:bg-slate-50 hover:shadow-md text-slate-700 rounded-xl smooth-transition active:scale-95 font-bold">
               <Pencil size={13} />수정
             </button>
-            <button onClick={onDelete} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-black/40 border border-white/10 hover:border-rose-400 hover:text-rose-400 hover:shadow-[0_0_15px_rgba(244,63,94,0.4),inset_0_0_10px_rgba(244,63,94,0.1)] text-slate-300 rounded-xl smooth-transition active:scale-95 font-bold">
+            <button onClick={onDelete} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-rose-50 border border-rose-200 shadow-[0_2px_4px_rgba(244,63,94,0.05)] hover:bg-rose-100 hover:shadow-md text-rose-700 rounded-xl smooth-transition active:scale-95 font-bold">
               <Trash2 size={13} />삭제
             </button>
-            <div className="w-px h-4 bg-white/20 mx-1"></div>
-            <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-full smooth-transition"><X size={18} /></button>
+            <div className="w-px h-6 bg-slate-200 mx-1"></div>
+            <button onClick={onClose} className="p-2 text-slate-500 hover:text-slate-800 hover:bg-white/80 rounded-full smooth-transition shadow-sm"><X size={18} /></button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto px-6 py-6 custom-scrollbar bg-black/20">
-          <div className="prose prose-sm max-w-none notice-content font-medium" dangerouslySetInnerHTML={{ __html: notice.content }} />
+        <div className="flex-1 overflow-auto px-8 py-8 custom-scrollbar bg-white/30">
+          <div className="prose prose-sm max-w-none notice-content text-slate-800 font-medium" dangerouslySetInnerHTML={{ __html: notice.content }} />
         </div>
       </motion.div>
     </div>,
@@ -464,7 +464,7 @@ export const InlineNoticePanel: React.FC<InlineNoticePanelProps> = ({ className 
             setShowPopover(next);
             if (next) load();
           }}
-          className="flex flex-col items-center justify-center bg-black/40 border border-white/10 text-slate-400 hover:border-rose-400 hover:text-rose-400 hover:shadow-[0_0_15px_rgba(244,63,94,0.4),inset_0_0_10px_rgba(244,63,94,0.1)] w-[72px] h-[60px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 backdrop-blur-md"
+          className="flex flex-col items-center justify-center bg-gradient-to-b from-rose-50 to-white/60 border border-white shadow-[0_2px_10px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,1)] hover:bg-gradient-to-b hover:from-rose-100 hover:to-white text-rose-700 w-[72px] h-[60px] rounded-xl smooth-transition active:scale-95 hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] backdrop-blur-xl"
         >
           <Bell size={22} className="mb-1" />
           <span className="text-[11px] font-bold whitespace-nowrap">공지사항</span>
@@ -477,29 +477,29 @@ export const InlineNoticePanel: React.FC<InlineNoticePanelProps> = ({ className 
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-[300px] bg-[#0B0F19]/95 backdrop-blur-[40px] shadow-[0_20px_60px_rgba(0,0,0,0.8),0_0_20px_rgba(34,211,238,0.1)] rounded-2xl border border-white/10 z-[80] overflow-hidden flex flex-col"
+              className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-[300px] bg-white/80 backdrop-blur-[40px] shadow-[0_20px_60px_rgba(0,0,0,0.1)] rounded-2xl border border-white/80 z-[80] overflow-hidden flex flex-col"
             >
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10 bg-white/5">
-                <span className="text-xs font-bold text-slate-200">사내 공지사항</span>
-                <button onClick={handleWriteClick} className="flex items-center gap-1 px-2.5 py-1 text-[10px] bg-black/40 border border-white/10 text-slate-300 hover:border-cyan-400 hover:text-cyan-400 hover:shadow-[0_0_10px_rgba(34,211,238,0.4)] rounded-lg smooth-transition active:scale-95 font-bold">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100/50 bg-white/40">
+                <span className="text-xs font-bold text-slate-800">사내 공지사항</span>
+                <button onClick={handleWriteClick} className="flex items-center gap-1 px-2.5 py-1 text-[10px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:shadow-sm rounded-lg smooth-transition active:scale-95 font-bold shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
                   <Plus size={12} /> 작성
                 </button>
               </div>
               
               <div className="max-h-[300px] overflow-y-auto custom-scrollbar p-1.5">
                 {loading ? (
-                  <div className="py-6 text-center text-slate-500 font-bold text-xs">로딩...</div>
+                  <div className="py-6 text-center text-slate-400 font-bold text-xs">로딩...</div>
                 ) : notices.length === 0 ? (
-                  <div className="py-6 text-center text-slate-500 font-bold text-xs">등록된 공지가 없습니다</div>
+                  <div className="py-6 text-center text-slate-400 font-bold text-xs">등록된 공지가 없습니다</div>
                 ) : (
                   notices.map(n => (
                     <button
                       key={n.id}
                       onClick={() => { setViewNotice(n); setShowPopover(false); }}
-                      className="w-full text-left px-3 py-2.5 flex flex-col gap-1 hover:bg-white/5 hover:border-cyan-400/30 border border-transparent rounded-xl smooth-transition active:scale-95 border-b border-white/5 last:border-0"
+                      className="w-full text-left px-3 py-2.5 flex flex-col gap-1 hover:bg-slate-50/80 hover:shadow-sm border border-transparent hover:border-slate-200/50 rounded-xl smooth-transition active:scale-95 border-b border-slate-100/50 last:border-0"
                     >
-                      <div className="text-[11px] font-bold text-slate-200 truncate w-full">{n.title}</div>
-                      <div className="text-[9px] font-bold text-slate-500">{formatDate(n.createdAt)}</div>
+                      <div className="text-[11px] font-bold text-slate-800 truncate w-full">{n.title}</div>
+                      <div className="text-[9px] font-bold text-slate-400">{formatDate(n.createdAt)}</div>
                     </button>
                   ))
                 )}
@@ -516,41 +516,41 @@ export const InlineNoticePanel: React.FC<InlineNoticePanelProps> = ({ className 
       </AnimatePresence>
 
       <style>{`
-        /* Gamer/Dark theme styles for Editor & View */
-        .notice-content { color: #e2e8f0; }
-        .notice-content h1 { font-size: 1.8em; font-weight: 700; margin: 0.5em 0; color: #f8fafc; }
-        .notice-content h2 { font-size: 1.5em; font-weight: 700; margin: 0.5em 0; color: #f8fafc; }
-        .notice-content h3 { font-size: 1.25em; font-weight: 600; margin: 0.4em 0; color: #f8fafc; }
+        /* Bright Glassmorphism styles for Editor & View */
+        .notice-content { color: #1e293b; }
+        .notice-content h1 { font-size: 1.8em; font-weight: 700; margin: 0.5em 0; color: #0f172a; }
+        .notice-content h2 { font-size: 1.5em; font-weight: 700; margin: 0.5em 0; color: #0f172a; }
+        .notice-content h3 { font-size: 1.25em; font-weight: 600; margin: 0.4em 0; color: #0f172a; }
         .notice-content p { margin: 0.3em 0; line-height: 1.6; }
         .notice-content ul { list-style: disc; padding-left: 1.5em; margin: 0.3em 0; }
         .notice-content ol { list-style: decimal; padding-left: 1.5em; margin: 0.3em 0; }
         .notice-content table { border-collapse: collapse; width: 100%; margin: 0.5em 0; }
-        .notice-content th, .notice-content td { border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; text-align: left; }
-        .notice-content th { background: rgba(255,255,255,0.05); font-weight: 600; color: #cbd5e1; }
-        .notice-content img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
-        .notice-content mark { padding: 2px 4px; border-radius: 4px; background-color: rgba(34,211,238,0.2); color: #22d3ee; }
-        .notice-content blockquote { border-left: 4px solid #38bdf8; padding-left: 1em; color: #94a3b8; margin: 0.5em 0; font-style: italic; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 0 8px 8px 0; }
+        .notice-content th, .notice-content td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
+        .notice-content th { background: rgba(241,245,249,0.5); font-weight: 600; color: #334155; }
+        .notice-content img { max-width: 100%; height: auto; border-radius: 8px; margin: 0.5em 0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.8); }
+        .notice-content mark { padding: 2px 4px; border-radius: 4px; background-color: rgba(59,130,246,0.15); color: #1d4ed8; }
+        .notice-content blockquote { border-left: 4px solid #3b82f6; padding-left: 1em; color: #64748b; margin: 0.5em 0; font-style: italic; background: rgba(241,245,249,0.5); padding: 12px; border-radius: 0 12px 12px 0; }
 
-        .tiptap { min-height: 350px; color: #e2e8f0; }
+        .tiptap { min-height: 350px; color: #1e293b; }
         .tiptap:focus { outline: none; }
-        .tiptap h1 { font-size: 1.8em; font-weight: 700; margin: 0.5em 0; color: #f8fafc; }
-        .tiptap h2 { font-size: 1.5em; font-weight: 700; margin: 0.5em 0; color: #f8fafc; }
-        .tiptap h3 { font-size: 1.25em; font-weight: 600; margin: 0.4em 0; color: #f8fafc; }
+        .tiptap h1 { font-size: 1.8em; font-weight: 700; margin: 0.5em 0; color: #0f172a; }
+        .tiptap h2 { font-size: 1.5em; font-weight: 700; margin: 0.5em 0; color: #0f172a; }
+        .tiptap h3 { font-size: 1.25em; font-weight: 600; margin: 0.4em 0; color: #0f172a; }
         .tiptap p { margin: 0.3em 0; line-height: 1.6; }
         .tiptap ul { list-style: disc; padding-left: 1.5em; margin: 0.3em 0; }
         .tiptap ol { list-style: decimal; padding-left: 1.5em; margin: 0.3em 0; }
         .tiptap table { border-collapse: collapse; width: 100%; margin: 0.5em 0; }
-        .tiptap th, .tiptap td { border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; text-align: left; min-width: 50px; position: relative; }
-        .tiptap th { background: rgba(255,255,255,0.05); font-weight: 600; color: #cbd5e1; }
-        .tiptap img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
-        .tiptap mark { padding: 2px 4px; border-radius: 4px; background-color: rgba(34,211,238,0.2); color: #22d3ee; }
-        .tiptap blockquote { border-left: 4px solid #38bdf8; padding-left: 1em; color: #94a3b8; margin: 0.5em 0; font-style: italic; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 0 8px 8px 0; }
-        .tiptap .selectedCell { background: rgba(56,189,248,0.15); }
+        .tiptap th, .tiptap td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; min-width: 50px; position: relative; }
+        .tiptap th { background: rgba(241,245,249,0.5); font-weight: 600; color: #334155; }
+        .tiptap img { max-width: 100%; height: auto; border-radius: 8px; margin: 0.5em 0; }
+        .tiptap mark { padding: 2px 4px; border-radius: 4px; background-color: rgba(59,130,246,0.15); color: #1d4ed8; }
+        .tiptap blockquote { border-left: 4px solid #3b82f6; padding-left: 1em; color: #64748b; margin: 0.5em 0; font-style: italic; background: rgba(241,245,249,0.5); padding: 12px; border-radius: 0 12px 12px 0; }
+        .tiptap .selectedCell { background: rgba(59,130,246,0.1); }
         
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.4); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.6); }
       `}</style>
     </>
   );
